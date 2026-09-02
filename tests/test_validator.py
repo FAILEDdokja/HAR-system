@@ -32,7 +32,10 @@ from har.contracts import (
     UiStatus,
     Wrist,
 )
-from har.protocol.spec import load_protocol
+try:
+    from har.protocol.spec import load_protocol
+except ImportError:  # pragma: no cover - bare interpreter without PyYAML
+    load_protocol = None
 from har.protocol.validator import SequenceValidator
 
 REPO = Path(__file__).resolve().parents[1]
@@ -150,6 +153,7 @@ def tray_frame(frame_index: int, *, present: bool = True, measured: bool = True)
     )
 
 
+@unittest.skipIf(load_protocol is None, "PyYAML is not installed")
 class ValidatorCorrectRunTests(unittest.TestCase):
     """A4 done-when: the correct run completes 8/8 with zero violations."""
 
@@ -231,6 +235,7 @@ class ValidatorCorrectRunTests(unittest.TestCase):
         self.assertTrue(seen)  # events were spread across the run
 
 
+@unittest.skipIf(load_protocol is None, "PyYAML is not installed")
 class ValidatorViolationSemanticsTests(unittest.TestCase):
     """Rules 3 and 4: skip and out-of-order detection on the A1 fixtures."""
 
@@ -284,6 +289,7 @@ class ValidatorViolationSemanticsTests(unittest.TestCase):
         self.assertEqual(violations_before, validator.violations)
 
 
+@unittest.skipIf(load_protocol is None, "PyYAML is not installed")
 class ValidatorTimeoutTests(unittest.TestCase):
     """Rule 5 (A5 done-when): a stalled step emits TIMEOUT once and not twice."""
 
@@ -341,6 +347,7 @@ class ValidatorTimeoutTests(unittest.TestCase):
         self.assertEqual(timeouts[0].message, status.last_alert)
 
 
+@unittest.skipIf(load_protocol is None, "PyYAML is not installed")
 class ValidatorMeasuredFalseTests(unittest.TestCase):
     """Rule 7 (A5 done-when): a ``measured=False`` track never completes a step."""
 
@@ -408,6 +415,7 @@ class ValidatorMeasuredFalseTests(unittest.TestCase):
         self.assertEqual("PRESENT_TRAY", validator.current.step_id)
 
 
+@unittest.skipIf(load_protocol is None, "PyYAML is not installed")
 class ValidatorInterfaceTests(unittest.TestCase):
     def test_reset_restarts_the_run(self):
         frames = load_frames("evidence_correct.json")
@@ -442,6 +450,7 @@ class ValidatorInterfaceTests(unittest.TestCase):
             SequenceValidator(ProtocolSpec("EMPTY", "t", "0", steps=()))
 
 
+@unittest.skipIf(load_protocol is None, "PyYAML is not installed")
 class ValidatorUiStatusTests(unittest.TestCase):
     """A7 done-when: the full ``UiStatus``, mid-run and again at completion.
 

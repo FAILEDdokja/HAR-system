@@ -19,8 +19,11 @@
 
 detector:
   median_window: 5
-  min_area: 400
-  roi: null # e.g. [52, 72, 588, 456] once the rack position is fixed
+  # Retuned against demo/*.mp4 (the committed stand-in footage): the rendered
+  # vial is a 20x20 px blob whose contour area (~361 px) is under the old 400.
+  # 300 keeps single-pixel speckle out while seeing every PTS-01 prop.
+  min_area: 300
+  roi: null # e.g. [52, 72, 588, 456] once the rack position is fixed (B6)
 
 colours:
   # Black tray: any hue, low value (dark), low-ish saturation so shadows on

@@ -38,6 +38,12 @@ _PREDICATE_RE = re.compile(r"^\s*([a-z_]+)\((.*)\)\s*$")
 _MOVEMENT_EPS_PX = 8.0
 _STABLE_EPS_PX = 5.0
 
+#: HOI states in which the object is in the operator's hand.  A "settled"
+#: object must not be in any of them (see :func:`settled`).
+_IN_HAND = frozenset(
+    {HandObjectState.PICKED_UP.value, HandObjectState.CARRYING.value}
+)
+
 
 def _predicate_args(step: StepSpec) -> tuple[str, ...]:
     """Return comma-separated arguments from ``step.predicate``.
@@ -178,13 +184,26 @@ def hoi_cycle(ev: FrameEvidence, spec: ProtocolSpec, step: StepSpec, st: Predica
 
 
 def settled(ev: FrameEvidence, spec: ProtocolSpec, step: StepSpec, st: PredicateState) -> bool:
-    """Target object's centre is in the zone and stationary."""
+    """Target object's centre is in the zone, stationary, and out of the hand.
+
+    The in-hand guard matters on live perception (B5 cross-check): after a
+    release the operator's hand lingers on the object, so the interaction FSM
+    still reports ``PICKED_UP``/``CARRYING`` for a few frames while the object
+    is already stationary inside its zone.  Without the guard the *verify*
+    step becomes satisfied before the preceding *extract* step's
+    ``hoi_cycle`` can complete, and the validator raises a false
+    ``OUT_OF_ORDER`` on a perfectly correct run.  An object still in the
+    operator's hand is not settled.
+    """
 
     label = _arg(step, 0, step.target)
     zone_id = _arg(step, 1, step.zone)
     box = _measured_box(ev, label)
     zone = _zone_box(spec, zone_id)
     if box is None or zone is None or not _center_in_box(box, zone):
+        st.last_box = box
+        return False
+    if ev.hoi_state(label) in _IN_HAND:
         st.last_box = box
         return False
 

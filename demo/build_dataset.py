@@ -307,13 +307,23 @@ def render_mp4(path: Path, frames: list[FrameEvidence], title: str) -> None:
             if tr is None or tr.box is None:
                 continue
             x1, y1, x2, y2 = (int(round(v)) for v in tr.box)
+            if label == "tray_lid":
+                # A lid sits *on* a tray: leave the tray's rim visible, exactly
+                # as the evidence recording claims (tray measured=True from
+                # frame 0). Without the inset the lid pixel-occludes the tray
+                # and the colour detector cannot corroborate the evidence.
+                x1, y1, x2, y2 = x1 + 8, y1 + 8, x2 - 8, y2 - 8
             colour = COLOURS_BGR[label]
             cv2.rectangle(img, (x1, y1), (x2, y2), colour, thickness=-1)
             cv2.rectangle(img, (x1, y1), (x2, y2), (255, 255, 255), thickness=1)
         for wrist in ev.hands:
             cx, cy = int(round(wrist.point[0])), int(round(wrist.point[1]))
-            cv2.circle(img, (cx, cy), 14, COLOURS_BGR["hand"], thickness=-1)
-            cv2.circle(img, (cx, cy), 14, (255, 255, 255), thickness=1)
+            # Ring, not a filled disc: a filled 14 px disc fully occludes the
+            # 20 px vial while it is carried, which contradicts the evidence
+            # (vial measured=True through the transfer) and breaks any
+            # detector-driven replay of this footage.
+            cv2.circle(img, (cx, cy), 14, COLOURS_BGR["hand"], thickness=3)
+            cv2.circle(img, (cx, cy), 16, (255, 255, 255), thickness=1)
         cv2.rectangle(img, (0, 0), (w, 28), (24, 24, 24), thickness=-1)
         cv2.putText(
             img,
