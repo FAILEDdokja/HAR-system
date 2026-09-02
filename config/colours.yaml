@@ -1,0 +1,51 @@
+# config/colours.yaml - HSV ranges for the five PTS-01 protocol objects.
+#
+# Owned by Person B (task B2). The venue lighting WILL differ from the tuning
+# room: retune here, never in code. Do this before the demo, from the live
+# camera, with the colour-key card in frame.
+#
+# SCALE: OpenCV HSV - H in [0, 180), S and V in [0, 255]. (GIMP reports
+# H in degrees; divide by 2.) Pick values with the props actually in frame.
+#
+# FORMAT:
+#   detector:           options for har.perception.color_detector.ColorDetector
+#     median_window:    temporal smoothing window (frames) per label
+#     min_area:         blobs smaller than this many pixels are ignored
+#     roi:              [x1, y1, x2, y2] pixels, or null for the whole frame
+#   colours:            one entry per protocol object (labels are frozen by
+#                       protocols/pts01.yaml); each takes one or more inclusive
+#                       [lo, hi] HSV ranges. Multiple ranges are OR-ed together
+#                       (red wraps around H = 180).
+
+detector:
+  median_window: 5
+  min_area: 400
+  roi: null # e.g. [52, 72, 588, 456] once the rack position is fixed
+
+colours:
+  # Black tray: any hue, low value (dark), low-ish saturation so shadows on
+  # the white bench do not pass. Raise the V upper bound if the room is dark.
+  tray:
+    ranges:
+      - [[0, 0, 0], [180, 255, 75]]
+
+  # Yellow lid.
+  tray_lid:
+    ranges:
+      - [[20, 80, 80], [35, 255, 255]]
+
+  # Red box: hue wraps, so it needs two ranges.
+  red_box:
+    ranges:
+      - [[0, 100, 80], [8, 255, 255]]
+      - [[172, 100, 80], [179, 255, 255]]
+
+  # Blue box.
+  blue_box:
+    ranges:
+      - [[100, 90, 60], [125, 255, 255]]
+
+  # Green vial: wide green window - vials are small, keep it forgiving.
+  vial:
+    ranges:
+      - [[40, 60, 60], [85, 255, 255]]
