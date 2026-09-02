@@ -18,6 +18,7 @@ import importlib.util
 import re
 import shutil
 import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -261,6 +262,22 @@ class ScriptTests(unittest.TestCase):
         self.assertIn("exec python -u -m har.app", text)
         self.assertIn("--out-dir", text)
         self.assertIn("/data", text)
+
+    def test_entrypoint_gets_out_of_the_way_for_a_command_override(self):
+        """`docker run IMAGE python -m unittest discover` replaces the CMD but
+        not the entrypoint.  Without the passthrough the entrypoint read
+        `python` as CLI arguments, defaulted --source to camera 0 and refused
+        to start — which is what CI and the runbook both do."""
+        bash = shutil.which("bash")
+        if bash is None:
+            self.skipTest("no bash on this machine")
+        marker = "har-entrypoint-passthrough-ok"
+        result = subprocess.run(
+            [str(REPO / "docker" / "entrypoint.sh"), sys.executable, "-c", f"print({marker!r})"],
+            capture_output=True, text=True, cwd=str(REPO),
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn(marker, result.stdout)
 
     def test_healthcheck_probes_the_gui_status_route(self):
         text = _read("docker/healthcheck.sh")

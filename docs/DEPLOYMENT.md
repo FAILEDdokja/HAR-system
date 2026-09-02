@@ -20,7 +20,7 @@ docker compose up -d                    # GUI + stream on http://localhost:8080
 | Base | `python:3.11-slim-bookworm`, multi-stage: the builder's virtualenv is the only thing copied forward |
 | Python | `requirements.lock`, installed with `--no-deps` (see below) |
 | OS packages | `espeak-ng` only — pyttsx3's offline Linux TTS driver |
-| Code | `har/`, `protocols/`, `config/`, `models/` (12 MB of pretrained weights), `demo/` footage, `tests/` |
+| Code | `har/`, `protocols/`, `config/`, `models/` (12 MB of pretrained weights), `demo/` footage, `tests/` — 79 files, 17 MB of build context |
 | User | `har`, uid 1001, no shell; `/data` is the artefact volume |
 | Port | 8080 (monitoring GUI + MJPEG stream) |
 | Entrypoint | `docker/entrypoint.sh` → `python -m har.app` |
@@ -80,7 +80,9 @@ in `./runs/latest/` on the host.
 docker run --rm -p 8080:8080 -v "$PWD/runs:/data" sih26174-har
 ```
 
-Any arguments go straight to the CLI:
+Any arguments go straight to the CLI.  Anything whose first word is *not* a
+flag is treated as a command to run instead of CLI arguments — the entrypoint
+execs it directly, the way the postgres and mysql images do:
 
 ```bash
 # replay a specific file, headless, no voice
@@ -92,7 +94,7 @@ docker run --rm -v "$PWD/runs:/data" sih26174-har \
     --source tests/fixtures/synthetic_correct.mp4 --headless --no-voice
 grep PROTOCOL_COMPLETE runs/latest/events.jsonl
 
-# the test suite, in the image
+# the test suite, in the image (a command override, not CLI flags)
 docker run --rm sih26174-har python -m unittest discover
 ```
 

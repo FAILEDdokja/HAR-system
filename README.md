@@ -17,7 +17,7 @@ streamed video — with no ground station in the loop.
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-.venv/bin/python -m unittest discover        # 200 tests; heavy-dep ones skip in a bare interpreter
+.venv/bin/python -m unittest discover        # 201 tests; heavy-dep ones skip in a bare interpreter
 ```
 
 Voice output needs a local TTS driver (offline, no cloud): SAPI5 on Windows,
@@ -145,7 +145,7 @@ before travel. After that the demo runs in airplane mode end to end.
 
 ## Status (verified 2026-09-02, this branch)
 
-`.venv/bin/python -m unittest discover` → **200 tests, OK** (123 run in a bare
+`.venv/bin/python -m unittest discover` → **201 tests, OK** (124 run in a bare
 interpreter, 77 skip without cv2/flask/pyttsx3/PyYAML/ultralytics).
 
 | Layer | State |

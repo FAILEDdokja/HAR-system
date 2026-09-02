@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # SIH26174 container entrypoint.
 #
-# Three jobs, in order:
+# Four jobs, in order:
 #
+#   0. Get out of the way when the caller overrides the command
+#      (`docker run IMAGE python -m unittest discover`).
 #   1. Point --out-dir at the artefact volume.  The CLI's own default is
 #      ./runs/latest, which inside a container is writable, invisible from the
 #      host and deleted with the container — the worst of all three worlds for
@@ -21,6 +23,17 @@
 #   HAR_STREAM_PORT  GUI/MJPEG port to publish   (default 8080)
 #   HAR_EXTRA_ARGS   extra CLI flags, word-split (default empty)
 set -euo pipefail
+
+# --- command override ------------------------------------------------------
+# `docker run IMAGE python -m unittest discover` (or `docker compose run`)
+# replaces the CMD but not this entrypoint, so the first word arrives here.
+# har.app takes options only, never a positional, so anything not starting
+# with a dash is a command to run instead — the same convention the postgres
+# and mysql images use.
+if [[ $# -gt 0 && "$1" != -* ]]; then
+    echo "har: exec $*"
+    exec "$@"
+fi
 
 OUT_DIR="${HAR_OUT_DIR:-/data/latest}"
 STREAM_PORT="${HAR_STREAM_PORT:-8080}"
