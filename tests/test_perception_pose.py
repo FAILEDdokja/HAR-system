@@ -6,6 +6,7 @@ the same result surface the ultralytics adapters consume (see
 """
 
 import unittest
+from pathlib import Path
 
 from har.contracts import Wrist
 from har.perception.pose import WristExtractor
@@ -174,6 +175,28 @@ class WristExtractionTests(unittest.TestCase):
         with self.assertRaises(RuntimeError) as caught:
             WristExtractor("models/yolo11n-pose.pt")
         self.assertIn("model=", str(caught.exception))
+
+
+class ShippedWeightsTests(unittest.TestCase):
+    """The committed weights must load on the pinned ultralytics.
+
+    ``models/yolo11n-pose.pt`` is a YOLO11 checkpoint; its ``C3k2`` block only
+    exists from ultralytics 8.3.0 on.  On 8.2.100 the load raised, ``har.app``
+    caught it and quietly fell back to ``--wrists none`` — the live-camera run
+    kept going but observed no manipulation steps and emitted spurious
+    violations.  This test is the tripwire for the next pin bump.
+    """
+
+    def test_committed_pose_weights_load(self):
+        try:
+            from ultralytics import YOLO
+        except Exception as exc:  # ImportError, or a torch without its runtime
+            self.skipTest(f"ultralytics unavailable: {exc}")
+        weights = Path(__file__).resolve().parents[1] / "models" / "yolo11n-pose.pt"
+        if not weights.exists():
+            self.skipTest(f"{weights.name} is not present")
+        model = YOLO(str(weights))
+        self.assertEqual({0: "person"}, dict(model.names))
 
 
 if __name__ == "__main__":

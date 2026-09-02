@@ -137,6 +137,30 @@ class WristAdapterTests(unittest.TestCase):
     def test_coco_wrist_indices_are_nine_and_ten(self):
         self.assertEqual(((9, "left"), (10, "right")), COCO_WRIST_KEYPOINTS)
 
+    def test_placeholder_row_with_no_keypoints_is_not_a_person(self):
+        """ultralytics reports an empty frame as ``keypoints.xy`` shaped
+        ``(1, 0, 2)`` — one row holding zero keypoints — rather than as zero
+        rows.  Indexing wrist 9 into it raised IndexError and killed the frame
+        loop, so the first empty camera frame ended a live run."""
+        result = FakeResult(keypoints=FakeKeypoints(xy=[[]], conf=None))
+        self.assertEqual([], wrists_from_pose_result(result))
+
+    def test_short_keypoint_row_is_skipped_rather_than_indexed(self):
+        result = FakeResult(keypoints=FakeKeypoints(xy=[[[1.0, 2.0]] * 5], conf=None))
+        self.assertEqual([], wrists_from_pose_result(result))
+
+    def test_a_real_person_is_kept_alongside_a_placeholder_row(self):
+        result = FakeResult(
+            keypoints=FakeKeypoints(
+                xy=[[], person((100.0, 110.0), (200.0, 210.0))],
+                conf=[[], conf_row(0.9, 0.8)],
+            )
+        )
+        wrists = wrists_from_pose_result(result, min_confidence=0.2)
+        self.assertEqual({("left", (100.0, 110.0)), ("right", (200.0, 210.0))},
+                         {(w.side, w.point) for w in wrists})
+        self.assertEqual([1, 1], [w.person_id for w in wrists])
+
 
 if __name__ == "__main__":
     unittest.main()

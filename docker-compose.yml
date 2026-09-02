@@ -1,0 +1,55 @@
+# SIH26174 HAR — container deployment.
+#
+#   docker compose up -d                        # demo replay + GUI on :8080
+#   docker compose --profile camera up -d       # live webcam (needs /dev/video0)
+#   docker compose logs -f
+#   docker compose down
+#
+# Artefacts (events.jsonl, events.csv, meta.json, recordings/) are written to
+# ./runs on the host.  Every variable below has a working default; see
+# .env.example and docs/DEPLOYMENT.md.
+
+x-har: &har
+  build:
+    context: .
+    args:
+      # cpu keeps the ~2.5 GB of NVIDIA wheels out of the image; see the
+      # Dockerfile header and tools/docker_requirements.py.
+      TORCH_CHANNEL: ${TORCH_CHANNEL:-cpu}
+      TORCH_INDEX_URL: ${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cpu}
+  image: sih26174-har:${TORCH_CHANNEL:-cpu}
+  restart: unless-stopped
+  # The CLI runs daemon threads (GUI server, TTS worker); give it a real PID 1.
+  init: true
+  # Match the container user to the owner of the artefact directory, otherwise
+  # the bind mount below is read-only for uid 1001.
+  user: "${HAR_UID:-1001}:${HAR_GID:-1001}"
+  environment:
+    HAR_OUT_DIR: /data/${HAR_RUN_NAME:-latest}
+    HAR_STREAM_PORT: "8080"
+    HAR_EXTRA_ARGS: ${HAR_EXTRA_ARGS:-}
+  ports:
+    - "${HAR_HOST_PORT:-8080}:8080"
+  volumes:
+    - ${HAR_DATA_DIR:-./runs}:/data
+  # The app finalises the recording and closes the event log on SIGTERM;
+  # give it time before compose escalates to SIGKILL.
+  stop_grace_period: 30s
+
+services:
+  # Default: the demo that cannot fail — replay the shipped footage in a loop,
+  # record it, and serve the monitoring GUI.  No camera, no GPU required.
+  har:
+    <<: *har
+    command: ["--source", "demo/correct.mp4", "--loop", "--record"]
+
+  # Live camera.  Opt in with: docker compose --profile camera up -d har-camera
+  # /dev/video0 must exist on the host; if permission is denied, run the
+  # container as a host user in the `video` group (HAR_UID/HAR_GID) or add
+  # `group_add: ["video"]` below.
+  har-camera:
+    <<: *har
+    profiles: ["camera"]
+    devices:
+      - /dev/video0:/dev/video0
+    command: ["--source", "0", "--record"]
