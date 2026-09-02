@@ -232,6 +232,13 @@ class ComposeTests(unittest.TestCase):
         self.assertIn("driver: nvidia", self.gpu)
         self.assertIn("capabilities: [gpu]", self.gpu)
 
+    def test_gpu_override_repeats_the_build_context(self):
+        """Merging two compose files can replace the override's `build` mapping
+        outright rather than deep-merging it, which would drop `context` and
+        fail the build before anything else mattered."""
+        self.assertIn("context: .", self.text)
+        self.assertIn("context: .", self.gpu)
+
     def test_every_env_default_is_documented(self):
         example = _read(".env.example")
         for variable in sorted(set(re.findall(r"\$\{([A-Z_]+)", self.text))):

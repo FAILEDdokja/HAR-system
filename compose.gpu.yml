@@ -9,6 +9,10 @@
 
 x-gpu: &gpu
   build:
+    # `context` is repeated rather than inherited: when two compose files are
+    # merged the override's `build` mapping may replace the base one outright,
+    # and a build with no context fails before anything else matters.
+    context: .
     args:
       TORCH_CHANNEL: cuda
       TORCH_INDEX_URL: ${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cu130}
