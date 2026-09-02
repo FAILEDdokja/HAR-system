@@ -9,7 +9,7 @@
 # (see wheelhouse/README.md for how the wheelhouse is filled before travel.)
 
 # --- top-level, from requirements.txt -------------------------------------
-ultralytics==8.2.100
+ultralytics==8.3.0
 opencv-python==4.11.0.86
 numpy==1.26.4
 PyYAML==6.0.3

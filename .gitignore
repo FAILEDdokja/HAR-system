@@ -21,6 +21,11 @@ datasets/
 data/
 *.pt.bak
 
+# Container-local config (see .env.example for the template)
+.env
+.env.*
+!.env.example
+
 # Editors / OS
 .vscode/
 .idea/

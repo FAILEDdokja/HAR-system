@@ -1,0 +1,45 @@
+# Build context for the image.  Everything the container needs stays in: the
+# package, the protocol, the tuning configs, the pretrained weights in models/
+# (12 MB), the demo footage the default CMD replays, and tests/ so that
+# `docker run --rm sih26174-har python -m unittest discover` works.
+
+# VCS / CI
+.git
+.gitignore
+.github
+
+# Local Python state
+.venv
+.venv*
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Run artefacts - created at runtime under /data, never baked into the image
+runs/
+logs/
+recordings/
+datasets/
+data/
+*.onnx
+*.engine
+*.tflite
+*.pt.bak
+
+# Not needed at runtime
+docs/
+wheelhouse/
+Dockerfile
+docker-compose.yml
+compose.*.yml
+.env
+.env.*
+README.md
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
