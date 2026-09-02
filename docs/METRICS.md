@@ -66,6 +66,23 @@ Negative values are annotation granularity: t_end is quoted to the nearest video
 
 All three runs reproduce their ground-truth expected logs exactly — no missing, no extra, no timestamps or messages out of place.
 
+## A10 — Violation evidence table
+
+Each violation type the validator can emit — **SKIPPED**, **OUT_OF_ORDER**, and
+**TIMEOUT** — with the actual timestamped JSONL log line from a real validator replay
+as evidence.
+
+| Violation | Scenario | Step | t_rel | Frame | Log line (JSONL) |
+|---|---|---|---|---|---|
+| **OUT_OF_ORDER** | `skip` — blue box HOI satisfied while EXTRACT_RED is current | EXTRACT_BLUE (5) | 4.0 s | 60 | `{"t_iso":"2026-09-02T10:00:04+00:00","t_rel":4.0,"frame_index":60,"step_id":"EXTRACT_BLUE","step_index":5,"event":"OUT_OF_ORDER","status":"VIOLATION","message":"Out of sequence. The red box must be placed before the blue box.","confidence":1.0}` |
+| **SKIPPED** | `skip` — EXTRACT_BLUE hold met; cursor jumps, EXTRACT_RED is skipped | EXTRACT_RED (3) | 4.0 s | 60 | `{"t_iso":"2026-09-02T10:00:04+00:00","t_rel":4.0,"frame_index":60,"step_id":"EXTRACT_RED","step_index":3,"event":"SKIPPED","status":"VIOLATION","message":"Step 3 skipped. The red box must go to zone A before the blue box.","confidence":1.0}` |
+| **TIMEOUT** | Stalled step — tray never appears in rack ROI, PRESENT_TRAY exceeds 60 s | PRESENT_TRAY (1) | 61.0 s | 915 | `{"t_iso":"2026-09-02T10:31:01+00:00","t_rel":61.0,"frame_index":915,"step_id":"PRESENT_TRAY","step_index":1,"event":"TIMEOUT","status":"VIOLATION","message":"Step 1 timed out after 60s","confidence":1.0}` |
+
+**How to reproduce:** the SKIP and OUT_OF_ORDER lines come from replaying
+`tests/fixtures/evidence_skip.json` through `SequenceValidator.update()`; the TIMEOUT
+line comes from feeding 62 seconds of empty frames (no objects, no hands) to a fresh
+validator with the same protocol.
+
 ## Definitions and scope
 
 - **Step accuracy.** Per step instance (8 steps × 3 runs), the validator outcome derived from its emitted events (`COMPLETED`, `SKIPPED`, `TIMEOUT`, `INCOMPLETE` = started but not finished, `NOT_PERFORMED` = never reached) is compared to the operator annotation (`COMPLETED`, `SKIPPED`, `NOT_PERFORMED`). The `skip` and `wrong_order` runs are deliberately out-of-order scenarios: their operator annotations contain skips the validator reports as the one-shot `OUT_OF_ORDER` alert rather than a per-step `SKIPPED`, which is exactly the design in `har/protocol/validator.py` — the numbers below are the honest consequence.
