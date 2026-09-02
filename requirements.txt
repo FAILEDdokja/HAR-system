@@ -1,0 +1,26 @@
+# SIH26174 runtime dependencies.
+#
+# Phase 1 task: after a clean `pip install -r requirements.txt` on the demo
+# machine, freeze the resolved set into `requirements.lock` and commit it. The
+# demo machine may have no network, so the lock file plus a local wheelhouse is
+# what makes "offline standalone system" literally true.
+#
+# Nothing here may be imported by `har/contracts.py`, `har/protocol/**` or
+# `tests/**`. Track A runs in a bare interpreter by design.
+
+# Perception (Track B) ------------------------------------------------------
+# Pinned to the version that produced the committed weights in models/.
+ultralytics==8.2.100
+opencv-python>=4.10,<6
+numpy>=1.26
+
+# Config (Track A) ----------------------------------------------------------
+PyYAML==6.0.3
+
+# Output & interface (Track C) ----------------------------------------------
+pyttsx3==2.99          # offline TTS: SAPI5 on Windows, espeak-ng on Linux
+flask>=3.0             # browser GUI + MJPEG stream (same endpoint)
+
+# Edge export (Phase 3, optional) ------------------------------------------
+# onnxruntime>=1.18
+# onnx>=1.16

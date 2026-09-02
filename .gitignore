@@ -1,4 +1,27 @@
+# Python
 .venv/
 __pycache__/
 *.py[cod]
+*.egg-info/
 
+# Run artefacts - never commit these
+runs/
+logs/
+recordings/
+demo/*.mp4
+demo/*.jsonl
+demo/*.csv
+*.onnx
+*.engine
+*.tflite
+
+# Datasets and training output stay out of git; keep only the protocol and
+# the metrics tables under docs/.
+datasets/
+data/
+*.pt.bak
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
