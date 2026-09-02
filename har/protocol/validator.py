@@ -1,4 +1,4 @@
-"""Sequence validation: the core of the protocol-compliance logic (step A4).
+"""Sequence validation and the ``UiStatus`` producer (steps A4 and A7).
 
 This module implements the ``SequenceValidator`` interface frozen in
 ``docs/DEVELOPMENT_PLAN.md`` Appendix A.  It consumes ``FrameEvidence``
@@ -65,6 +65,21 @@ predicate has never been observed unsatisfied, the run is credited from
 the first satisfied observation:  ``span = frame_index - first_true_frame + 1``.
 This is what lets a compressed fixture (one row per action) satisfy the
 full ``hold_frames`` of a 15 fps camera without changing the yaml.
+
+The ``UiStatus`` producer (A7)
+------------------------------
+``status()`` is the whole of Track A's output to the browser GUI and the
+in-frame HUD: a frozen ``UiStatus`` snapshot assembled from the validator's
+own bookkeeping — ``current_step_id`` / ``current_step_index`` from the
+cursor, ``next_step_id`` / ``next_instruction`` from the step *after* the
+cursor (what to do once the current one is confirmed), ``completed`` /
+``skipped`` / ``violations`` as step-id tuples in first-occurrence order,
+``last_alert`` from the most recent violation event's message, and
+``state`` in exactly ``NOT_STARTED`` / ``IN_PROGRESS`` / ``COMPLETE``.
+Track C renders these fields verbatim and never computes.  Like everything
+else here it is a pure read of the run's state: it advances no cursor,
+evaluates no predicate, and two calls between frames return equal
+snapshots, which is what makes a 2 Hz poll safe.
 """
 
 from __future__ import annotations
@@ -400,7 +415,43 @@ class SequenceValidator:
         return self._finished
 
     def status(self) -> UiStatus:
-        """Snapshot for the GUI.  Track C renders; it never computes."""
+        """Snapshot for the GUI and the HUD.  Track C renders; it never computes.
+
+        Field-by-field (plan §5, A7 — every listed field is populated here,
+        from validator state only; nothing is re-derived from evidence):
+
+        ``state``
+            ``NOT_STARTED`` before the first frame, ``COMPLETE`` once
+            ``PROTOCOL_COMPLETE`` has fired, ``IN_PROGRESS`` otherwise.
+        ``current_step_id`` / ``current_step_index``
+            The step under the cursor.  A GUI that renders only sees one of
+            the three states above, so a non-empty current step is also
+            produced for ``NOT_STARTED`` (the checklist highlights step 1,
+            "present the tray") and for ``COMPLETE`` (the checklist stays on
+            the last step) — that is deliberate: a blank highlight is not a
+            renderable state.  Note ``current`` (the property) stays
+            ``None`` in both cases; the property is for logic, the snapshot
+            is for rendering.
+        ``next_step_id`` / ``next_instruction``
+            The step *after* the current one — the announced "next step" —
+            taken from ``StepSpec.instruction``, empty at completion.
+        ``completed`` / ``skipped``
+            Step ids in order of the corresponding ``COMPLETED`` /
+            ``SKIPPED`` events.
+        ``violations``
+            Step ids of every step involved in a ``VIOLATION``-status event
+            (``OUT_OF_ORDER``, ``SKIPPED``, ``TIMEOUT``), first-occurrence
+            order; drives the GUI's red banner.
+        ``last_alert``
+            Message of the most recent ``VIOLATION`` event (also spoken by
+            Track C's ``OfflineSpeaker``); persists until ``reset()``.
+        ``t_rel`` / ``fps``
+            Carried from the most recently consumed evidence frame — the
+            GUI's "time since start" and live FPS readouts.
+
+        Pure read: no state advances, so repeated polls between frames
+        return equal snapshots.
+        """
         if self._cursor is None and not self._finished:
             state = "NOT_STARTED"
             current = self._steps[0]

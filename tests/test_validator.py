@@ -1,4 +1,4 @@
-"""Unit tests for the sequence validator (Track A, step A4).
+"""Unit tests for the sequence validator and its UiStatus producer (Track A).
 
 A4 acceptance (plan §5): replaying ``tests/fixtures/evidence_correct.json``
 through ``SequenceValidator`` against ``protocols/pts01.yaml`` must produce
@@ -12,6 +12,11 @@ items: a stalled step emits ``TIMEOUT`` once and not twice (rule 5), and a
 degenerate evidence (a step that never happens; a tracker that only coasts)
 that the A1 fixtures deliberately do not model, so they synthesise
 ``FrameEvidence`` directly instead of replaying a fixture file.
+
+Step A7 (plan §5) is the ``UiStatus`` producer: ``ValidatorUiStatusTests``
+below asserts the *full* snapshot mid-run and again at completion — every
+field of the frozen dataclass, by exact equality — plus the JSON shape the
+``/status`` poller renders and the purity that makes 2 Hz polling safe.
 """
 
 import json
@@ -19,7 +24,14 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-from har.contracts import FrameEvidence, ObjectTrack, StepEvent, Wrist
+from har.contracts import (
+    CONTRACT_VERSION,
+    FrameEvidence,
+    ObjectTrack,
+    StepEvent,
+    UiStatus,
+    Wrist,
+)
 from har.protocol.spec import load_protocol
 from har.protocol.validator import SequenceValidator
 
@@ -29,6 +41,33 @@ FIXTURES = REPO / "tests" / "fixtures"
 FRAME_SIZE = (640, 480)
 
 VIOLATION_EVENTS = {"SKIPPED", "OUT_OF_ORDER", "TIMEOUT"}
+
+PTS01_TITLE = "Payload Tray Sorting & Sample Transfer"
+
+
+def not_started_ui_status() -> UiStatus:
+    """The exact full snapshot a fresh (or freshly reset) validator exposes.
+
+    Track C renders before the first frame arrives, so even the empty
+    snapshot is a complete UiStatus: the checklist points at step 1 with
+    state ``NOT_STARTED`` and every list field is an empty tuple.
+    """
+    return UiStatus(
+        protocol_id="PTS-01",
+        protocol_title=PTS01_TITLE,
+        current_step_id="PRESENT_TRAY",
+        current_step_index=1,
+        next_step_id="OPEN_TRAY",
+        next_instruction="Lift the tray lid clear of the tray slot.",
+        completed=(),
+        skipped=(),
+        violations=(),
+        state="NOT_STARTED",
+        t_rel=0.0,
+        fps=0.0,
+        last_alert="",
+        contract_version=CONTRACT_VERSION,
+    )
 
 
 def evidence_from_dict(d: dict) -> FrameEvidence:
@@ -401,6 +440,179 @@ class ValidatorInterfaceTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             SequenceValidator(ProtocolSpec("EMPTY", "t", "0", steps=()))
+
+
+class ValidatorUiStatusTests(unittest.TestCase):
+    """A7 done-when: the full ``UiStatus``, mid-run and again at completion.
+
+    Each snapshot test asserts exact equality against a hand-written
+    ``UiStatus``, so *every* field of the frozen contract is pinned —
+    protocol identity, the current step, the announced next step and its
+    instruction, the ``completed``/``skipped``/``violations`` tuples,
+    ``state``, ``last_alert``, ``t_rel``, ``fps`` and the contract version.
+    A field the validator forgot to populate, or populated from the wrong
+    place, changes one of these snapshots and fails here, not in the demo.
+    """
+
+    # -- the two snapshots the done-when names --------------------------
+
+    def test_full_status_mid_run(self):
+        frames = load_frames("evidence_correct.json")
+        validator = make_validator()
+        for frame in frames[:5]:  # through f60/t4.0: three steps confirmed
+            validator.update(frame)
+        self.assertEqual(
+            UiStatus(
+                protocol_id="PTS-01",
+                protocol_title=PTS01_TITLE,
+                current_step_id="VERIFY_RED_PLACED",
+                current_step_index=4,
+                next_step_id="EXTRACT_BLUE",
+                # next_instruction is the *next* step's instruction, verbatim
+                # from pts01.yaml — not its title and not its voice_prompt.
+                next_instruction="Pick the blue box out of the tray and place it in zone B.",
+                completed=("PRESENT_TRAY", "OPEN_TRAY", "EXTRACT_RED"),
+                skipped=(),
+                violations=(),
+                state="IN_PROGRESS",
+                t_rel=4.0,  # carried from the last evidence frame consumed
+                fps=15.0,
+                last_alert="",  # a clean run has never alerted
+                contract_version=CONTRACT_VERSION,
+            ),
+            validator.status(),
+        )
+
+    def test_full_status_at_completion(self):
+        validator, _ = replay(load_frames("evidence_correct.json"))
+        self.assertEqual(
+            UiStatus(
+                protocol_id="PTS-01",
+                protocol_title=PTS01_TITLE,
+                # At completion the checklist stays on the final step.
+                current_step_id="STOW_AND_CLOSE",
+                current_step_index=8,
+                next_step_id="",
+                next_instruction="",
+                completed=(
+                    "PRESENT_TRAY",
+                    "OPEN_TRAY",
+                    "EXTRACT_RED",
+                    "VERIFY_RED_PLACED",
+                    "EXTRACT_BLUE",
+                    "VERIFY_BLUE_PLACED",
+                    "SAMPLE_TRANSFER",
+                    "STOW_AND_CLOSE",
+                ),
+                skipped=(),
+                violations=(),
+                state="COMPLETE",
+                t_rel=14.5,
+                fps=15.0,
+                last_alert="",
+                contract_version=CONTRACT_VERSION,
+            ),
+            validator.status(),
+        )
+
+    # -- the run states around those two snapshots ----------------------
+
+    def test_full_status_before_the_first_frame(self):
+        self.assertEqual(not_started_ui_status(), make_validator().status())
+
+    def test_full_status_on_a_flagged_run(self):
+        # The skip fixture is the run where a GUI must switch from progress
+        # to its violation rendering: skipped + violations non-empty and
+        # last_alert carrying the alert the speaker already said.
+        frames = load_frames("evidence_skip.json")
+        validator, events = replay(frames)
+        last_violation = [e for e in events if e.status == "VIOLATION"][-1]
+        self.assertEqual(
+            UiStatus(
+                protocol_id="PTS-01",
+                protocol_title=PTS01_TITLE,
+                # The cursor re-baselined onto EXTRACT_BLUE and ran on; by
+                # the fixture's end step 7 is current.
+                current_step_id="SAMPLE_TRANSFER",
+                current_step_index=7,
+                next_step_id="STOW_AND_CLOSE",
+                next_instruction=(
+                    "Return the lid to the tray and withdraw both hands from the rack envelope."
+                ),
+                completed=("PRESENT_TRAY", "OPEN_TRAY", "EXTRACT_BLUE", "VERIFY_BLUE_PLACED"),
+                skipped=("EXTRACT_RED",),
+                # First-occurrence order: the OUT_OF_ORDER alert was noted
+                # on EXTRACT_BLUE before EXTRACT_RED was marked skipped.
+                violations=("EXTRACT_BLUE", "EXTRACT_RED"),
+                state="IN_PROGRESS",
+                t_rel=9.5,
+                fps=15.0,
+                last_alert=last_violation.message,
+                contract_version=CONTRACT_VERSION,
+            ),
+            validator.status(),
+        )
+        self.assertEqual(
+            "Step 3 skipped. The red box must go to zone A before the blue box.",
+            validator.status().last_alert,
+        )
+
+    def test_reset_returns_to_the_not_started_snapshot(self):
+        validator, _ = replay(load_frames("evidence_skip.json"))
+        self.assertNotEqual(not_started_ui_status(), validator.status())
+        validator.reset()
+        self.assertEqual(not_started_ui_status(), validator.status())
+
+    # -- the properties Track C's renderers depend on ---------------------
+
+    def test_status_is_a_pure_snapshot(self):
+        # The GUI polls at 2 Hz — several polls can land between frames, so
+        # reading the status must not disturb the run.  Drive two identical
+        # validators and poll only one of them twice per frame.
+        frames = load_frames("evidence_correct.json")
+        polled, quiet = make_validator(), make_validator()
+        events_polled, events_quiet = [], []
+        for frame in frames:
+            events_polled.extend(polled.update(frame))
+            events_quiet.extend(quiet.update(frame))
+            self.assertEqual(polled.status(), polled.status())
+        self.assertEqual(events_quiet, events_polled)
+        self.assertEqual(quiet.status(), polled.status())
+
+    def test_status_serialises_for_the_status_endpoint(self):
+        # C8/C9 serve ``status().to_dict()`` as JSON; the browser renders
+        # field-for-field, so the dict shape is part of the contract.
+        validator = make_validator()
+        for frame in load_frames("evidence_correct.json"):
+            validator.update(frame)
+        payload = json.loads(validator.status().to_json())
+        self.assertEqual(
+            {
+                "protocol_id",
+                "protocol_title",
+                "current_step_id",
+                "current_step_index",
+                "next_step_id",
+                "next_instruction",
+                "completed",
+                "skipped",
+                "violations",
+                "state",
+                "t_rel",
+                "fps",
+                "last_alert",
+                "contract_version",
+            },
+            set(payload),
+        )
+        # Tuples become JSON-native lists; nothing else is transformed.
+        self.assertIsInstance(payload["completed"], list)
+        self.assertEqual(8, len(payload["completed"]))
+        self.assertEqual("COMPLETE", payload["state"])
+        self.assertEqual(CONTRACT_VERSION, payload["contract_version"])
+        # to_dict rounds the floats exactly as the contract declares.
+        self.assertEqual(round(validator.status().t_rel, 3), payload["t_rel"])
+        self.assertEqual(round(validator.status().fps, 2), payload["fps"])
 
 
 if __name__ == "__main__":
