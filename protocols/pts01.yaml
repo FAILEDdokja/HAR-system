@@ -12,8 +12,29 @@
 #   * `predicate` names are a frozen vocabulary implemented by Track A in
 #     har/protocol/predicates.py. An unknown name is a load-time error.
 #   * `target` refers to an entry in `objects`; `zone` refers to a Zone id.
-#   * `hold_frames` is how many consecutive frames the predicate must hold
-#     before the step is declared complete.
+#   * `hold_frames` is how many consecutive *video* frames the predicate must
+#     hold before the step is declared complete. A later step uses its own
+#     `hold_frames` before a skip is declared (DEVELOPMENT_PLAN.md A4 rules 2&4),
+#     so a small value on the action steps also hardens skip detection against a
+#     single dropped/spurious frame.
+#
+# THRESHOLD TUNING (step A6, Track A)
+#   Calibrated for a 15 fps camera (the validator's hold logic counts true
+#   video frames via `frame_index`, so these numbers are frame-rate, not
+#   wall-clock, dependent).  Tuned with `tools/tune_thresholds.py` against the
+#   recorded evidence (the A1 fixtures, and the densified/dropout stress sweep
+#   that emulates A8's real footage):
+#     * Action steps (hoi_cycle / transfer) raised from hold_frames=1 to 4 so a
+#       one-frame detector dropout on the *current* object + a one-frame spurious
+#       read on a *later* object cannot false-trigger OUT_OF_ORDER/SKIPPED. 4
+#       frames (~0.27 s) still completes on real footage (the released object is
+#       held in its zone) and stays within the recorded evidence's satisfied
+#       span.  Re-check against demo/*.mp4 (A8) when it lands.
+#     * Dwell steps (object_stable / settled / hands_clear) keep generous holds
+#       (15-30 frames = 1-2 s) that survive the colour detector's burst dropouts
+#       under median-of-N smoothing (config/colours.yaml, B2).
+#   Thresholds live here, never in code — retune under venue lighting without
+#   touching Python.
 #
 # PREDICATE VOCABULARY (frozen)
 #   object_stable(label)              present, measured, centre in rack ROI, low movement
@@ -83,7 +104,7 @@ steps:
     target: red_box
     zone: zone_a
     requires: [OPEN_TRAY]
-    hold_frames: 1
+    hold_frames: 4
     timeout_s: 90
     voice_prompt: Step 3. Move the red box to zone A.
     voice_alert: Step 3 skipped. The red box must go to zone A before the blue box.
@@ -108,7 +129,7 @@ steps:
     target: blue_box
     zone: zone_b
     requires: [VERIFY_RED_PLACED]
-    hold_frames: 1
+    hold_frames: 4
     timeout_s: 90
     voice_prompt: Step 5. Move the blue box to zone B.
     voice_alert: Out of sequence. The red box must be placed before the blue box.
@@ -133,7 +154,7 @@ steps:
     target: vial
     zone: rack_slot
     requires: [VERIFY_BLUE_PLACED]
-    hold_frames: 1
+    hold_frames: 4
     timeout_s: 90
     voice_prompt: Step 7. Transfer the sample vial to the rack slot.
 
