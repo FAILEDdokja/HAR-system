@@ -1,0 +1,937 @@
+[
+  {
+    "frame_index": 0,
+    "t_rel": 0.0,
+    "frame_size": [
+      640,
+      480
+    ],
+    "objects": {
+      "tray": {
+        "label": "tray",
+        "box": [
+          230.0,
+          240.0,
+          410.0,
+          410.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "tray_lid": {
+        "label": "tray_lid",
+        "box": [
+          230.0,
+          240.0,
+          410.0,
+          410.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "red_box": {
+        "label": "red_box",
+        "box": [
+          250.0,
+          260.0,
+          310.0,
+          320.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "blue_box": {
+        "label": "blue_box",
+        "box": [
+          330.0,
+          260.0,
+          390.0,
+          320.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "vial": {
+        "label": "vial",
+        "box": [
+          270.0,
+          280.0,
+          290.0,
+          300.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      }
+    },
+    "hands": [
+      {
+        "point": [
+          320.0,
+          430.0
+        ],
+        "confidence": 0.95,
+        "side": "right",
+        "person_id": 0
+      }
+    ],
+    "hoi": {
+      "tray": "IDLE",
+      "tray_lid": "IDLE",
+      "red_box": "IDLE",
+      "blue_box": "IDLE",
+      "vial": "IDLE"
+    },
+    "rack_ready": true,
+    "fps": 15.0
+  },
+  {
+    "frame_index": 15,
+    "t_rel": 1.0,
+    "frame_size": [
+      640,
+      480
+    ],
+    "objects": {
+      "tray": {
+        "label": "tray",
+        "box": [
+          230.0,
+          240.0,
+          410.0,
+          410.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "tray_lid": {
+        "label": "tray_lid",
+        "box": [
+          230.0,
+          240.0,
+          410.0,
+          410.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "red_box": {
+        "label": "red_box",
+        "box": [
+          250.0,
+          260.0,
+          310.0,
+          320.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "blue_box": {
+        "label": "blue_box",
+        "box": [
+          330.0,
+          260.0,
+          390.0,
+          320.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "vial": {
+        "label": "vial",
+        "box": [
+          270.0,
+          280.0,
+          290.0,
+          300.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      }
+    },
+    "hands": [
+      {
+        "point": [
+          320.0,
+          430.0
+        ],
+        "confidence": 0.95,
+        "side": "right",
+        "person_id": 0
+      }
+    ],
+    "hoi": {
+      "tray": "IDLE",
+      "tray_lid": "IDLE",
+      "red_box": "IDLE",
+      "blue_box": "IDLE",
+      "vial": "IDLE"
+    },
+    "rack_ready": true,
+    "fps": 15.0
+  },
+  {
+    "frame_index": 30,
+    "t_rel": 2.0,
+    "frame_size": [
+      640,
+      480
+    ],
+    "objects": {
+      "tray": {
+        "label": "tray",
+        "box": [
+          230.0,
+          240.0,
+          410.0,
+          410.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "tray_lid": {
+        "label": "tray_lid",
+        "box": [
+          230.0,
+          60.0,
+          410.0,
+          160.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "red_box": {
+        "label": "red_box",
+        "box": [
+          250.0,
+          260.0,
+          310.0,
+          320.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "blue_box": {
+        "label": "blue_box",
+        "box": [
+          330.0,
+          260.0,
+          390.0,
+          320.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "vial": {
+        "label": "vial",
+        "box": [
+          270.0,
+          280.0,
+          290.0,
+          300.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      }
+    },
+    "hands": [
+      {
+        "point": [
+          320.0,
+          110.0
+        ],
+        "confidence": 0.95,
+        "side": "right",
+        "person_id": 0
+      }
+    ],
+    "hoi": {
+      "tray": "IDLE",
+      "tray_lid": "CARRYING",
+      "red_box": "IDLE",
+      "blue_box": "IDLE",
+      "vial": "IDLE"
+    },
+    "rack_ready": true,
+    "fps": 15.0
+  },
+  {
+    "frame_index": 45,
+    "t_rel": 3.0,
+    "frame_size": [
+      640,
+      480
+    ],
+    "objects": {
+      "tray": {
+        "label": "tray",
+        "box": [
+          230.0,
+          240.0,
+          410.0,
+          410.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "tray_lid": {
+        "label": "tray_lid",
+        "box": [
+          230.0,
+          60.0,
+          410.0,
+          160.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "red_box": {
+        "label": "red_box",
+        "box": [
+          250.0,
+          260.0,
+          310.0,
+          320.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "blue_box": {
+        "label": "blue_box",
+        "box": [
+          400.0,
+          260.0,
+          460.0,
+          320.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "vial": {
+        "label": "vial",
+        "box": [
+          270.0,
+          280.0,
+          290.0,
+          300.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      }
+    },
+    "hands": [
+      {
+        "point": [
+          430.0,
+          290.0
+        ],
+        "confidence": 0.95,
+        "side": "right",
+        "person_id": 0
+      }
+    ],
+    "hoi": {
+      "tray": "IDLE",
+      "tray_lid": "IDLE",
+      "red_box": "IDLE",
+      "blue_box": "PICKED UP",
+      "vial": "IDLE"
+    },
+    "rack_ready": true,
+    "fps": 15.0
+  },
+  {
+    "frame_index": 60,
+    "t_rel": 4.0,
+    "frame_size": [
+      640,
+      480
+    ],
+    "objects": {
+      "tray": {
+        "label": "tray",
+        "box": [
+          230.0,
+          240.0,
+          410.0,
+          410.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "tray_lid": {
+        "label": "tray_lid",
+        "box": [
+          230.0,
+          60.0,
+          410.0,
+          160.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "red_box": {
+        "label": "red_box",
+        "box": [
+          250.0,
+          260.0,
+          310.0,
+          320.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "blue_box": {
+        "label": "blue_box",
+        "box": [
+          484.0,
+          280.0,
+          540.0,
+          344.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "vial": {
+        "label": "vial",
+        "box": [
+          270.0,
+          280.0,
+          290.0,
+          300.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      }
+    },
+    "hands": [
+      {
+        "point": [
+          512.0,
+          312.0
+        ],
+        "confidence": 0.95,
+        "side": "right",
+        "person_id": 0
+      }
+    ],
+    "hoi": {
+      "tray": "IDLE",
+      "tray_lid": "IDLE",
+      "red_box": "IDLE",
+      "blue_box": "RELEASED",
+      "vial": "IDLE"
+    },
+    "rack_ready": true,
+    "fps": 15.0
+  },
+  {
+    "frame_index": 75,
+    "t_rel": 5.0,
+    "frame_size": [
+      640,
+      480
+    ],
+    "objects": {
+      "tray": {
+        "label": "tray",
+        "box": [
+          230.0,
+          240.0,
+          410.0,
+          410.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "tray_lid": {
+        "label": "tray_lid",
+        "box": [
+          230.0,
+          60.0,
+          410.0,
+          160.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "red_box": {
+        "label": "red_box",
+        "box": [
+          200.0,
+          260.0,
+          260.0,
+          320.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "blue_box": {
+        "label": "blue_box",
+        "box": [
+          484.0,
+          280.0,
+          540.0,
+          344.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "vial": {
+        "label": "vial",
+        "box": [
+          270.0,
+          280.0,
+          290.0,
+          300.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      }
+    },
+    "hands": [
+      {
+        "point": [
+          230.0,
+          290.0
+        ],
+        "confidence": 0.95,
+        "side": "right",
+        "person_id": 0
+      }
+    ],
+    "hoi": {
+      "tray": "IDLE",
+      "tray_lid": "IDLE",
+      "red_box": "PICKED UP",
+      "blue_box": "IDLE",
+      "vial": "IDLE"
+    },
+    "rack_ready": true,
+    "fps": 15.0
+  },
+  {
+    "frame_index": 90,
+    "t_rel": 6.0,
+    "frame_size": [
+      640,
+      480
+    ],
+    "objects": {
+      "tray": {
+        "label": "tray",
+        "box": [
+          230.0,
+          240.0,
+          410.0,
+          410.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "tray_lid": {
+        "label": "tray_lid",
+        "box": [
+          230.0,
+          60.0,
+          410.0,
+          160.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "red_box": {
+        "label": "red_box",
+        "box": [
+          100.0,
+          280.0,
+          156.0,
+          344.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "blue_box": {
+        "label": "blue_box",
+        "box": [
+          484.0,
+          280.0,
+          540.0,
+          344.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "vial": {
+        "label": "vial",
+        "box": [
+          120.0,
+          300.0,
+          140.0,
+          320.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      }
+    },
+    "hands": [
+      {
+        "point": [
+          128.0,
+          312.0
+        ],
+        "confidence": 0.95,
+        "side": "right",
+        "person_id": 0
+      }
+    ],
+    "hoi": {
+      "tray": "IDLE",
+      "tray_lid": "IDLE",
+      "red_box": "RELEASED",
+      "blue_box": "IDLE",
+      "vial": "IDLE"
+    },
+    "rack_ready": true,
+    "fps": 15.0
+  },
+  {
+    "frame_index": 105,
+    "t_rel": 7.0,
+    "frame_size": [
+      640,
+      480
+    ],
+    "objects": {
+      "tray": {
+        "label": "tray",
+        "box": [
+          230.0,
+          240.0,
+          410.0,
+          410.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "tray_lid": {
+        "label": "tray_lid",
+        "box": [
+          230.0,
+          60.0,
+          410.0,
+          160.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "red_box": {
+        "label": "red_box",
+        "box": [
+          100.0,
+          280.0,
+          156.0,
+          344.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "blue_box": {
+        "label": "blue_box",
+        "box": [
+          484.0,
+          280.0,
+          540.0,
+          344.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "vial": {
+        "label": "vial",
+        "box": [
+          120.0,
+          300.0,
+          140.0,
+          320.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      }
+    },
+    "hands": [
+      {
+        "point": [
+          200.0,
+          200.0
+        ],
+        "confidence": 0.95,
+        "side": "right",
+        "person_id": 0
+      }
+    ],
+    "hoi": {
+      "tray": "IDLE",
+      "tray_lid": "IDLE",
+      "red_box": "IDLE",
+      "blue_box": "IDLE",
+      "vial": "IDLE"
+    },
+    "rack_ready": true,
+    "fps": 15.0
+  },
+  {
+    "frame_index": 120,
+    "t_rel": 8.0,
+    "frame_size": [
+      640,
+      480
+    ],
+    "objects": {
+      "tray": {
+        "label": "tray",
+        "box": [
+          230.0,
+          240.0,
+          410.0,
+          410.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "tray_lid": {
+        "label": "tray_lid",
+        "box": [
+          230.0,
+          60.0,
+          410.0,
+          160.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "red_box": {
+        "label": "red_box",
+        "box": [
+          100.0,
+          280.0,
+          156.0,
+          344.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "blue_box": {
+        "label": "blue_box",
+        "box": [
+          484.0,
+          280.0,
+          540.0,
+          344.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "vial": {
+        "label": "vial",
+        "box": [
+          305.0,
+          105.0,
+          335.0,
+          145.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      }
+    },
+    "hands": [
+      {
+        "point": [
+          320.0,
+          125.0
+        ],
+        "confidence": 0.95,
+        "side": "right",
+        "person_id": 0
+      }
+    ],
+    "hoi": {
+      "tray": "IDLE",
+      "tray_lid": "IDLE",
+      "red_box": "IDLE",
+      "blue_box": "IDLE",
+      "vial": "RELEASED"
+    },
+    "rack_ready": true,
+    "fps": 15.0
+  },
+  {
+    "frame_index": 135,
+    "t_rel": 9.0,
+    "frame_size": [
+      640,
+      480
+    ],
+    "objects": {
+      "tray": {
+        "label": "tray",
+        "box": [
+          230.0,
+          240.0,
+          410.0,
+          410.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "tray_lid": {
+        "label": "tray_lid",
+        "box": [
+          230.0,
+          240.0,
+          410.0,
+          410.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "red_box": {
+        "label": "red_box",
+        "box": [
+          100.0,
+          280.0,
+          156.0,
+          344.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "blue_box": {
+        "label": "blue_box",
+        "box": [
+          484.0,
+          280.0,
+          540.0,
+          344.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "vial": {
+        "label": "vial",
+        "box": [
+          305.0,
+          105.0,
+          335.0,
+          145.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      }
+    },
+    "hands": [
+      {
+        "point": [
+          320.0,
+          300.0
+        ],
+        "confidence": 0.95,
+        "side": "right",
+        "person_id": 0
+      }
+    ],
+    "hoi": {
+      "tray": "IDLE",
+      "tray_lid": "IDLE",
+      "red_box": "IDLE",
+      "blue_box": "IDLE",
+      "vial": "IDLE"
+    },
+    "rack_ready": true,
+    "fps": 15.0
+  },
+  {
+    "frame_index": 150,
+    "t_rel": 10.0,
+    "frame_size": [
+      640,
+      480
+    ],
+    "objects": {
+      "tray": {
+        "label": "tray",
+        "box": [
+          230.0,
+          240.0,
+          410.0,
+          410.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "tray_lid": {
+        "label": "tray_lid",
+        "box": [
+          230.0,
+          240.0,
+          410.0,
+          410.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "red_box": {
+        "label": "red_box",
+        "box": [
+          100.0,
+          280.0,
+          156.0,
+          344.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "blue_box": {
+        "label": "blue_box",
+        "box": [
+          484.0,
+          280.0,
+          540.0,
+          344.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      },
+      "vial": {
+        "label": "vial",
+        "box": [
+          305.0,
+          105.0,
+          335.0,
+          145.0
+        ],
+        "measured": true,
+        "lost_frames": 0
+      }
+    },
+    "hands": [
+      {
+        "point": [
+          20.0,
+          20.0
+        ],
+        "confidence": 0.95,
+        "side": "right",
+        "person_id": 0
+      }
+    ],
+    "hoi": {
+      "tray": "IDLE",
+      "tray_lid": "IDLE",
+      "red_box": "IDLE",
+      "blue_box": "IDLE",
+      "vial": "IDLE"
+    },
+    "rack_ready": true,
+    "fps": 15.0
+  }
+]
