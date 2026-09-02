@@ -267,11 +267,38 @@ streaming all live.
 
 **Duration:** ~3 h · **Integration gate G2.**
 
-| Track | Tasks |
-|---|---|
-| **A** | A6: threshold pass — replay the G1 runs and tune `hold_frames` / `timeout_s` in `protocols/pts01.yaml` until a real recording validates cleanly. A7: `UiStatus` producer (`current`, `next_instruction`, `completed`, `skipped`, `violations`, `last_alert`). A8: three recorded demo runs (correct, skip, wrong order) with their event logs committed under `demo/`. |
-| **B** | B7: live camera at a usable frame rate — `imgsz=480`, `conf=0.45`, pose every 2nd frame. B8: `datasets/` capture (~150 frames, 3 classes: tray, red box, blue box; vary angle, lighting, distance). B9: `tools/train.py` + `datasets/data.yaml`; **fine-tune `yolo11n`, 100 epochs** → `models/pts01_best.pt`. B10: swap `--detector yolo` onto the trained weights and re-measure. |
-| **C** | C6: `har/out/recorder.py` — `cv2.VideoWriter` mp4v into `recordings/run_<ts>.mp4`. C7: `har/out/streamer.py` — MJPEG at `--stream-host 0.0.0.0 --stream-port 8080`. C8: `har/ui/web.py` + `index.html` — `<img src="/stream">`, step checklist, violation banner, live log tail, FPS. C9: `har/ui/overlay.py` — in-frame HUD as the fallback when a browser is impractical. C10: bind `0.0.0.0`, not `127.0.0.1`. |
+> **Scheduling note that matters more than any task below.** B8 (dataset capture) and B9
+> (training) are the *long pole* of the entire day and the only tasks that cannot be
+> compressed. **Start B8 at the beginning of Phase 2, not the end**, and leave B9 training
+> in a background terminal while everyone else works. If training has not started by the
+> G2 mark it will not finish, and D7 ("a trained AI model") becomes a roadmap item.
+
+### Track A — thresholds, GUI state, demo recordings
+
+| # | File | Task | Est. | Acceptance |
+|---|---|---|---|---|
+| A6 | `protocols/pts01.yaml` | Replay the G1 runs and tune `hold_frames` / `timeout_s` until a *real* recording validates cleanly. Thresholds live in yaml, never in code. | 45 m | one real recording, 8/8 `COMPLETED`, 0 violations |
+| A7 | `har/protocol/validator.py` | `SequenceValidator.status() -> UiStatus` — `current_step_id`, `next_instruction`, `completed`, `skipped`, `violations`, `state`, `last_alert`. Signature in Appendix C. | 45 m | `tests/test_validator.py` asserts a full `UiStatus` mid-run and at completion |
+| A8 | `demo/` | Record three runs — correct, skip, wrong order — with their `.mp4` and `events.jsonl` committed. These are the demo's insurance policy. | 45 m | 3 mp4 + 3 jsonl; `--source demo/*.mp4` replays each and reproduces its log |
+
+### Track B — live frame rate, dataset, training
+
+| # | File | Task | Est. | Acceptance |
+|---|---|---|---|---|
+| B7 | `har/perception/perception.py` | Live camera at a usable rate: `imgsz=480`, `conf=0.45`, pose every 2nd frame. | 30 m | ≥ 12 FPS sustained on the demo hardware, logged |
+| B8 | `datasets/raw/` | **Start first.** ~150 frames, 3 classes (tray / red box / blue box), varying angle, distance and lighting. Include a few hard cases: partial occlusion by a hand, harsh side light. | 40 m | `datasets/raw/` has ≥150 images; `tools/capture_dataset.py` wrote them |
+| B9 | `tools/train.py`, `datasets/data.yaml` | Label, then **fine-tune `yolo11n`, 100 epochs, imgsz 640** → `models/pts01_best.pt`. Run in the background. | 40 m + train | `models/pts01_best.pt` exists; mAP@50 recorded in `docs/METRICS.md` |
+| B10 | — | Swap `--detector yolo --weights models/pts01_best.pt` and re-measure. | 15 m | trained detector beats the colour detector on the same 20 held-out frames |
+
+### Track C — recording, streaming, GUI
+
+| # | File | Task | Est. | Acceptance |
+|---|---|---|---|---|
+| C6 | `har/out/recorder.py` | `cv2.VideoWriter` mp4v → `recordings/run_<ts>.mp4`. Signature in Appendix C. | 30 m | file plays in a stock player, correct duration and fps |
+| C7 | `har/out/streamer.py` | MJPEG, **latest-frame-only** (never queue frames — a slow consumer must not stall the pipeline). | 45 m | `curl localhost:8080/stream` returns `multipart/x-mixed-replace` |
+| C8 | `har/ui/web.py`, `index.html` | `<img src="/stream">` + step checklist + violation banner + log tail + FPS, polling `/status` at 2 Hz. | 60 m | page renders live and the banner turns red on a violation |
+| C9 | `har/ui/overlay.py` | In-frame HUD, drawn in place. The fallback when a browser is impractical on the projector. | 20 m | `--headless` off, HUD readable at 1280×720 |
+| C10 | `har/ui/web.py` | Bind `0.0.0.0`, never `127.0.0.1`. | 5 m | page loads from a second machine on the LAN |
 
 ### Gate G2 — the live rehearsal
 
@@ -298,11 +325,28 @@ Do not let a training run hold the demo hostage.
 
 **Duration:** ~2.5 h · **Gate G3** = rehearsed.
 
-| Track | Tasks |
-|---|---|
-| **A** | A9: `tools/evaluate.py` — replay every `demo/` run and emit `docs/METRICS.md`: step accuracy, sequence completion rate, false-alarm rate, mean per-step latency. A10: a deliberate-failure table showing each violation class caught. |
-| **B** | B11: **`har/perception/rack.py`** — 4 rack fiducials (ArUco or drawn corners) → `cv2.getPerspectiveTransform` → all boxes and zones expressed in rack space. B12: the demo move — rotate the whole rig 90° mid-run and show the sequence still validates. B13: `model.export(format="onnx")` and a CPU-vs-ONNX latency row. |
-| **C** | C11: `requirements.lock` + a local wheelhouse, so the "offline standalone" claim is literal. C12: `README.md` quickstart that a judge can follow. C13: demo script rehearsal and the slide deck. |
+### Track A — measurement
+
+| # | File | Task | Est. | Acceptance |
+|---|---|---|---|---|
+| A9 | `tools/evaluate.py` | Replay every `demo/` run; compare emitted events to the hand-marked ground truth; write `docs/METRICS.md`. | 60 m | table with step accuracy, sequence completion rate, false-alarm rate, mean per-step latency |
+| A10 | `docs/METRICS.md` | Deliberate-failure table: one row per violation class (`SKIPPED`, `OUT_OF_ORDER`, `TIMEOUT`) showing it was caught, with the log line as evidence. | 30 m | every class in `StepEventType` that signals a violation appears with a real timestamp |
+
+### Track B — the differentiators
+
+| # | File | Task | Est. | Acceptance |
+|---|---|---|---|---|
+| B11 | `har/perception/rack.py` | 4 rack fiducials (ArUco or drawn corners) → `cv2.getPerspectiveTransform` → boxes and zones expressed in rack space. | 60 m | one unit test: a 90°-rotated synthetic frame yields the same rack-space box |
+| B12 | — | The demo move: rotate the whole rig 90° mid-run. | 20 m | sequence still validates; recorded for the pitch |
+| B13 | — | `model.export(format="onnx")` + a CPU-vs-ONNX latency row. | 30 m | two numbers side by side in `docs/METRICS.md` |
+
+### Track C — offline proof and delivery
+
+| # | File | Task | Est. | Acceptance |
+|---|---|---|---|---|
+| C11 | `requirements.lock`, `wheelhouse/` | Freeze the resolved set and download the wheels locally. Makes "offline standalone" literal rather than rhetorical. | 40 m | `pip install --no-index --find-links wheelhouse/ -r requirements.lock` succeeds with the network off |
+| C12 | `README.md` | Quickstart a judge can follow without asking a question. | 20 m | a teammate who has not read the plan gets a running demo from the README alone |
+| C13 | `demo/` | Rehearse §9 twice, timed. Build the deck. | 45 m | two clean runs, each under 4:30 |
 
 ### Gate G3
 
@@ -401,3 +445,194 @@ python3 -m venv .venv
 The suite collects **37 tests**: 28 run in a bare interpreter (no cv2, no torch, no numpy)
 and 9 skip when PyYAML is absent. Verified on 2026-09-02 with system Python 3.11.2:
 `Ran 37 tests ... OK (skipped=9)`; with PyYAML installed: `Ran 37 tests ... OK`.
+
+---
+
+## Appendix C — Interface specification
+
+**The point of this appendix:** every signature another track depends on is written down
+here. If it is here, you do not need to ask anybody. If you need something that is *not*
+here, that is a contract change — post it in the group chat and log it in §11.
+
+Signatures below are the commitment each track makes. `har/contracts.py` is already written
+and must not be edited to accommodate a local convenience.
+
+### Track A — `har/protocol/`
+
+```python
+# spec.py
+class ProtocolError(ValueError): ...
+def load_protocol(path: str | Path, frame_size: tuple[int, int]) -> ProtocolSpec
+    # Resolves normalised zone boxes to pixels. Raises ProtocolError on: unknown
+    # predicate name, dangling `requires`, duplicate step_id, non-linear chain,
+    # target/zone not declared. Fails at load time, never mid-run.
+
+# predicates.py — uniform signature for all six; see the vocabulary in pts01.yaml
+def object_stable(ev: FrameEvidence, spec: ProtocolSpec, step: StepSpec, st: PredicateState) -> bool
+def object_left_zone(ev, spec, step, st) -> bool
+def hoi_cycle(ev, spec, step, st) -> bool
+def settled(ev, spec, step, st) -> bool
+def transfer(ev, spec, step, st) -> bool
+def hands_clear(ev, spec, step, st) -> bool
+PREDICATES: dict[str, Callable[[FrameEvidence, ProtocolSpec, StepSpec, PredicateState], bool]]
+
+@dataclass
+class PredicateState:          # per-step mutable counters, owned by the validator
+    satisfied_frames: int = 0
+    hoi_seen: set[str] = field(default_factory=set)
+    last_box: BBox | None = None
+
+# validator.py
+class SequenceValidator:
+    def __init__(self, spec: ProtocolSpec) -> None
+    def update(self, evidence: FrameEvidence) -> list[StepEvent]   # may be empty
+    def status(self) -> UiStatus
+    def reset(self) -> None
+    @property
+    def current(self) -> StepSpec | None
+    @property
+    def completed_steps(self) -> tuple[str, ...]
+    @property
+    def violations(self) -> tuple[str, ...]
+    @property
+    def finished(self) -> bool
+```
+
+### Track B — `har/perception/`
+
+```python
+# detector.py — implements contracts.ObjectDetector
+class YoloDetector:
+    def __init__(self, weights: str | Path, classes: Sequence[str | int] | None = None,
+                 conf: float = 0.45, imgsz: int = 480, device: str = "cpu") -> None
+    def detect(self, frame: Any) -> list[Detection]
+    @property
+    def backend(self) -> str                     # "yolo"
+
+# color_detector.py — same interface, the no-training fallback
+class ColorDetector:
+    def __init__(self, ranges: Mapping[str, tuple[tuple[int,int,int], tuple[int,int,int]]],
+                 roi: BBox | None = None, median_window: int = 5, min_area: int = 400) -> None
+    def detect(self, frame: Any) -> list[Detection]
+    @property
+    def backend(self) -> str                     # "hsv"
+
+# pose.py
+class WristExtractor:
+    def __init__(self, weights: str | Path, conf: float = 0.35, every_n_frames: int = 1) -> None
+    def wrists(self, frame: Any, frame_index: int) -> list[Wrist]
+        # On skipped frames, return the last result — never an empty list, or the
+        # interaction FSM reads it as "hands vanished".
+
+# perception.py — the FrameEvidence producer
+class PerceptionStack:
+    def __init__(self, detector: ObjectDetector, wrists: WristExtractor,
+                 labels: Sequence[str], frame_size: tuple[int, int],
+                 tracker_config: TrackerConfig | None = None,
+                 interaction_config: InteractionConfig | None = None) -> None
+    def process(self, frame: Any, frame_index: int, t_rel: float) -> FrameEvidence
+```
+
+### Track C — `har/out/`, `har/ui/`, `har/app.py`
+
+```python
+# out/eventlog.py — implements contracts.EventSink
+class JsonlEventLog:
+    def __init__(self, jsonl_path: str | Path, csv_path: str | Path | None = None) -> None
+    def emit(self, event: StepEvent) -> None      # flush per event
+    def close(self) -> None
+
+# out/speaker.py — implements contracts.Speaker
+class OfflineSpeaker:
+    def __init__(self, rate: int = 165, enabled: bool = True) -> None
+    def say(self, text: str, priority: int = 0) -> None   # drop, never block
+    def stop(self) -> None
+
+# out/recorder.py
+class VideoRecorder:
+    def __init__(self, path: str | Path, frame_size: tuple[int, int],
+                 fps: float = 15.0, fourcc: str = "mp4v") -> None
+    def write(self, frame: Any) -> None
+    def close(self) -> None
+
+# out/streamer.py
+class MjpegStreamer:
+    def __init__(self, host: str = "0.0.0.0", port: int = 8080) -> None
+    def publish(self, frame: Any) -> None         # latest-frame-only, non-blocking
+    def latest_jpeg(self) -> bytes | None
+    def shutdown(self) -> None
+
+# ui/web.py
+def create_app(streamer: MjpegStreamer,
+               status_provider: Callable[[], UiStatus],
+               log_tail: Callable[[int], list[StepEvent]]) -> "flask.Flask"
+    # Routes: GET /  GET /stream  GET /status  GET /events?n=20
+
+# ui/overlay.py
+def draw_hud(frame: Any, status: UiStatus, evidence: FrameEvidence) -> None   # in place
+
+# app.py
+def build_arg_parser() -> argparse.ArgumentParser
+def main(argv: Sequence[str] | None = None) -> int
+```
+
+### The CLI surface (shared — C owns it, A and B consume it)
+
+```
+--source 0|PATH        camera index or video file        (default 0)
+--protocol PATH        protocols/pts01.yaml
+--detector yolo|color  detector backend                  (default color)
+--weights PATH         models/pts01_best.pt or models/yolo11n.pt
+--out-dir DIR          runs/<timestamp>/                 (default runs/latest)
+--headless             no GUI, no window, exit at end of source
+--no-voice             disable TTS
+--record / --no-record write recordings/run_<ts>.mp4
+--stream-host HOST     0.0.0.0
+--stream-port PORT     8080
+--pose-every-n N       run pose on every Nth frame       (default 1)
+--imgsz N              480
+--conf F               0.45
+--max-frames N         stop after N frames (0 = no limit)
+--contract             print CONTRACT_VERSION and exit 0
+```
+
+`--out-dir` always contains exactly: `events.jsonl`, `events.csv`, `meta.json`
+(source, protocol id/version, contract version, detector backend, fps, frame count,
+start/end ISO-8601) and, if `--record`, the mp4. Track A's `tools/evaluate.py` and
+Track C's GUI both read these paths — do not invent alternatives.
+
+---
+
+## Appendix D — Hackathon-day timeline
+
+Three phases, three tracks, nine hours. Gates are the only synchronous moments.
+
+| Time | Track A | Track B | Track C | All |
+|---|---|---|---|---|
+| 09:00 | | | | pull, `venv`, `unittest discover` → **37 green baseline** |
+| 09:15 | **A1** evidence fixtures | **B1** FPS probe | **C1** event replay | agree the fixtures exist, then separate |
+| 09:35 | A2 loader | B2 colour detector | C2 event log | |
+| 10:20 | A3 predicates | B3 YOLO detector | C3 speaker | |
+| 11:00 | A4 validator | B4 pose + B5 stack | C4 `app.py` | |
+| **11:45** | | | | **GATE G1** — headless synthetic run, correct + wrong order |
+| 12:15 | A6 threshold pass | **B8 dataset capture — start now** | C6 recorder | |
+| 13:00 | A7 `UiStatus` | **B9 training — background terminal** | C7 streamer | |
+| 13:45 | A8 record 3 demo runs | B7 live frame rate | C8 GUI | |
+| **14:30** | | | | **GATE G2** — live camera, full system |
+| 14:45 | A9 evaluate | B11 rack homography | C11 offline lock | |
+| 15:45 | A10 failure table | B12 rotation demo | C12 README | |
+| 16:15 | — | B13 ONNX | C13 rehearsal | |
+| **17:00** | | | | **GATE G3** — metrics real, network off, demo runs |
+| 17:15 | | | | Two timed rehearsals of §9. Buffer to 18:00. |
+
+**Rules that keep this schedule honest**
+
+1. **A1, B1 and C1 are unblocking tasks.** They exist so that at 09:35 all three people have
+   something concrete to build against and nobody is waiting on anybody.
+2. **B8 starts at 12:15, not at 14:00.** Training is the only task whose duration cannot be
+   negotiated. Everything else can be cut; this one can only be started earlier.
+3. **A gate is a stop-the-world moment.** If a gate fails, the failing item is cut from the
+   demo and moved to §10, and the schedule proceeds. Nobody debugs through a gate.
+4. **Cut order if time runs out**, in this sequence: B13 ONNX → B11/B12 rack frame →
+   C9 overlay (if the browser GUI works) → A10 failure table. **Never cut** A4 (validator),
+   C2 (log), C3 (voice) or C8 (GUI) — those four *are* the submission.
