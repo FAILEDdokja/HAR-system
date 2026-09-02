@@ -78,6 +78,22 @@ directory in your checkout, and on a Windows Docker Desktop host the named
 volume is the safe default because it has no bind-mount ownership or
 path-sharing requirements.
 
+A file source replays as fast as the CPU decodes it — with the colour detector
+that is one complete eight-step pass every couple of seconds, which the GUI
+cannot usefully show.  For a watchable demo, pace it through `.env`:
+
+```bash
+echo 'HAR_EXTRA_ARGS=--realtime --loop-pause 4' >> .env
+docker compose up -d --force-recreate
+```
+
+`--realtime` holds the source's own frame rate (15 fps for the shipped
+footage, so a pass takes its true 16.4 s) and `--loop-pause` keeps the finished
+checklist or the violation banner on screen for that many seconds before the
+rewind.  Neither flag changes what is detected or logged — the event rows are
+identical — and neither affects a camera source, which already runs in real
+time.
+
 ### docker run
 
 ```bash
@@ -272,6 +288,7 @@ passed them, and never adds `--stream-port` to a `--headless` run.
 | Voice silent, banner works | Expected without an audio device.  Pass an ALSA/Pulse device into the container, or add `--no-voice` to silence the warning. |
 | `Address already in use` on 8080 | Another run holds the port.  Set `HAR_HOST_PORT`, or stop the other container. |
 | Unhealthy but logs look fine | A `--headless` run has no HTTP server; the healthcheck then checks the process.  If it reports unhealthy, the frame loop died — read `docker compose logs`. |
+| GUI flashes through all eight steps every ~2 s | A file source is not paced by default.  `HAR_EXTRA_ARGS=--realtime --loop-pause 4` in `.env` replays at the footage's real frame rate and holds the result before each rewind. |
 | `/data` grows without bound | `--loop` is append-only by design.  Measured on the default demo command: the recording grows **25 MB/min** (640x480@15fps, mp4v) and `events.jsonl` about 0.06 MB/min — an hour of demo is ~1.5 GB.  Rotate `/data` yourself (`docker volume rm har-runs`, or delete the bind-mount directory), or drop `--loop --record` for a one-shot run. |
 
 ## Known gaps
