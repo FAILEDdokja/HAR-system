@@ -4,14 +4,20 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import yaml
+try:
+    import yaml
+except ImportError:  # pragma: no cover - bare interpreter (plan §3)
+    yaml = None
 
 from har.contracts import ProtocolSpec, StepSpec, Zone
-from har.protocol.spec import ProtocolError, load_protocol
+
+if yaml is not None:
+    from har.protocol.spec import ProtocolError, load_protocol
 
 PTS01_PATH = Path(__file__).resolve().parents[1] / "protocols" / "pts01.yaml"
 
 
+@unittest.skipIf(yaml is None, "PyYAML is not installed")
 class ProtocolLoaderTests(unittest.TestCase):
     def test_load_valid_pts01_protocol(self):
         spec = load_protocol(PTS01_PATH, frame_size=(640, 480))

@@ -101,6 +101,27 @@ class PredicateTests(unittest.TestCase):
         moving = PredicateState(last_box=(330, 260, 390, 320))
         self.assertFalse(settled(ev(objects={"blue": track("blue", (486, 281, 542, 345))}), self.spec, s, moving))
 
+    def test_settled_refuses_an_object_still_in_hand(self):
+        # B5 cross-check regression: right after a release the interaction FSM
+        # can still report PICKED_UP/CARRYING for a few frames while the object
+        # is already stationary in its zone.  An in-hand object is not settled;
+        # without this guard VERIFY_* fires a false OUT_OF_ORDER on a correct
+        # live run.  RELEASED and IDLE must still satisfy the predicate.
+        s = step("settled(blue, zone_b)", "blue", "zone_b")
+        box = (486, 281, 542, 345)
+        for hoi_state in (HandObjectState.PICKED_UP, HandObjectState.CARRYING):
+            st = PredicateState(last_box=box)
+            self.assertFalse(
+                settled(ev(objects={"blue": track("blue", box)}, hoi={"blue": hoi_state.value}), self.spec, s, st),
+                hoi_state,
+            )
+        for hoi_state in (HandObjectState.RELEASED, HandObjectState.IDLE):
+            st = PredicateState(last_box=box)
+            self.assertTrue(
+                settled(ev(objects={"blue": track("blue", box)}, hoi={"blue": hoi_state.value}), self.spec, s, st),
+                hoi_state,
+            )
+
     def test_transfer_positive_and_negative(self):
         s = step("transfer(red, vial, rack_slot)", "vial", "rack_slot")
         st = PredicateState()
