@@ -1,0 +1,6 @@
+{"t_iso":"2026-09-03T09:00:00+05:30","t_rel":0.5,"frame_index":15,"step_id":"PRESENT_TRAY","step_index":1,"event":"STARTED","status":"IN_PROGRESS","message":"Step 1 started","confidence":1.0}
+{"t_iso":"2026-09-03T09:00:01+05:30","t_rel":1.75,"frame_index":30,"step_id":"PRESENT_TRAY","step_index":1,"event":"COMPLETED","status":"OK","message":"Step 1 confirmed","confidence":0.94}
+{"t_iso":"2026-09-03T09:00:02+05:30","t_rel":2.1,"frame_index":45,"step_id":"OPEN_TRAY","step_index":2,"event":"STARTED","status":"IN_PROGRESS","message":"Step 2 started","confidence":1.0}
+{"t_iso":"2026-09-03T09:00:04+05:30","t_rel":4.1,"frame_index":69,"step_id":"OPEN_TRAY","step_index":2,"event":"COMPLETED","status":"OK","message":"Step 2 confirmed","confidence":0.94}
+{"t_iso":"2026-09-03T09:00:07+05:30","t_rel":7.25,"frame_index":190,"step_id":"EXTRACT_BLUE","step_index":5,"event":"OUT_OF_ORDER","status":"VIOLATION","message":"Out of sequence. The red box must be placed before the blue box.","confidence":0.91}
+{"t_iso":"2026-09-03T09:00:07+05:30","t_rel":7.25,"frame_index":190,"step_id":"EXTRACT_RED","step_index":3,"event":"SKIPPED","status":"VIOLATION","message":"Step 3 skipped. The red box must go to zone A before the blue box.","confidence":0.91}

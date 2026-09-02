@@ -1,0 +1,151 @@
+# PTS-01 - Payload Tray Sorting & Sample Transfer
+#
+# Locked 8-step procedure for SIH26174. Reconstruction of the (publicly
+# truncated) ISRO sample: "You are given a box that contains two smaller boxes
+# of color red and [blue] ...".
+#
+# CONVENTIONS
+#   * All boxes below are NORMALISED fractions of frame width/height, i.e.
+#     [x1, y1, x2, y2] with values in 0..1. har/protocol/spec.py resolves them
+#     to pixels into contracts.Zone.box. Zones must be defined by the rack
+#     overlay at runtime; the values here are the default desk layout.
+#   * `predicate` names are a frozen vocabulary implemented by Track A in
+#     har/protocol/predicates.py. An unknown name is a load-time error.
+#   * `target` refers to an entry in `objects`; `zone` refers to a Zone id.
+#   * `hold_frames` is how many consecutive frames the predicate must hold
+#     before the step is declared complete.
+#
+# PREDICATE VOCABULARY (frozen)
+#   object_stable(label)              present, measured, centre in rack ROI, low movement
+#   object_left_zone(label, zone)     present and centre outside zone
+#   hoi_cycle(label, zone)            NEAR -> PICKED_UP -> CARRYING -> RELEASED, release inside zone
+#   settled(label, zone)              centre inside zone and stationary for hold_frames
+#   transfer(src, dst, zone)          picked from src, released inside zone
+#   hands_clear(zone)                 no wrist inside zone for hold_frames
+
+protocol_id: PTS-01
+title: Payload Tray Sorting & Sample Transfer
+version: "1.0.0"
+
+objects:
+  - tray
+  - tray_lid
+  - red_box
+  - blue_box
+  - vial
+
+zones:
+  - id: rack_roi
+    label: Payload rack work envelope
+    box: [0.08, 0.15, 0.92, 0.95]
+  - id: tray_slot
+    label: Tray stow position
+    box: [0.34, 0.48, 0.66, 0.88]
+  - id: zone_a
+    label: Placement zone A (red)
+    box: [0.10, 0.50, 0.30, 0.80]
+  - id: zone_b
+    label: Placement zone B (blue)
+    box: [0.70, 0.50, 0.90, 0.80]
+  - id: rack_slot
+    label: Sample rack slot
+    box: [0.44, 0.18, 0.56, 0.34]
+
+steps:
+  - step_id: PRESENT_TRAY
+    index: 1
+    title: Present the payload tray
+    instruction: Place the outer tray inside the rack work envelope and let it settle.
+    predicate: object_stable(tray)
+    target: tray
+    zone: rack_roi
+    hold_frames: 15
+    timeout_s: 60
+    voice_prompt: Step 1. Present the payload tray in the rack envelope.
+
+  - step_id: OPEN_TRAY
+    index: 2
+    title: Open the tray
+    instruction: Lift the tray lid clear of the tray slot.
+    predicate: object_left_zone(tray_lid, tray_slot)
+    target: tray_lid
+    zone: tray_slot
+    requires: [PRESENT_TRAY]
+    hold_frames: 8
+    timeout_s: 60
+    voice_prompt: Step 2. Lift the tray lid clear of the tray.
+
+  - step_id: EXTRACT_RED
+    index: 3
+    title: Extract the red box
+    instruction: Pick the red box out of the tray and place it in zone A.
+    predicate: hoi_cycle(red_box, zone_a)
+    target: red_box
+    zone: zone_a
+    requires: [OPEN_TRAY]
+    hold_frames: 1
+    timeout_s: 90
+    voice_prompt: Step 3. Move the red box to zone A.
+    voice_alert: Step 3 skipped. The red box must go to zone A before the blue box.
+
+  - step_id: VERIFY_RED_PLACED
+    index: 4
+    title: Verify red box placement
+    instruction: Confirm the red box is stationary inside zone A.
+    predicate: settled(red_box, zone_a)
+    target: red_box
+    zone: zone_a
+    requires: [EXTRACT_RED]
+    hold_frames: 30
+    timeout_s: 30
+    voice_prompt: Step 4. Confirm the red box is seated in zone A.
+
+  - step_id: EXTRACT_BLUE
+    index: 5
+    title: Extract the blue box
+    instruction: Pick the blue box out of the tray and place it in zone B.
+    predicate: hoi_cycle(blue_box, zone_b)
+    target: blue_box
+    zone: zone_b
+    requires: [VERIFY_RED_PLACED]
+    hold_frames: 1
+    timeout_s: 90
+    voice_prompt: Step 5. Move the blue box to zone B.
+    voice_alert: Out of sequence. The red box must be placed before the blue box.
+
+  - step_id: VERIFY_BLUE_PLACED
+    index: 6
+    title: Verify blue box placement
+    instruction: Confirm the blue box is stationary inside zone B.
+    predicate: settled(blue_box, zone_b)
+    target: blue_box
+    zone: zone_b
+    requires: [EXTRACT_BLUE]
+    hold_frames: 30
+    timeout_s: 30
+    voice_prompt: Step 6. Confirm the blue box is seated in zone B.
+
+  - step_id: SAMPLE_TRANSFER
+    index: 7
+    title: Transfer the sample vial
+    instruction: Take the vial from the red box and insert it into the rack slot.
+    predicate: transfer(red_box, vial, rack_slot)
+    target: vial
+    zone: rack_slot
+    requires: [VERIFY_BLUE_PLACED]
+    hold_frames: 1
+    timeout_s: 90
+    voice_prompt: Step 7. Transfer the sample vial to the rack slot.
+
+  - step_id: STOW_AND_CLOSE
+    index: 8
+    title: Stow the lid and clear the envelope
+    instruction: Return the lid to the tray and withdraw both hands from the rack envelope.
+    predicate: hands_clear(rack_roi)
+    target: tray_lid
+    zone: rack_roi
+    requires: [SAMPLE_TRANSFER]
+    hold_frames: 20
+    timeout_s: 60
+    voice_prompt: Step 8. Replace the lid and clear the work envelope.
+    voice_alert: Hands are still inside the work envelope.
