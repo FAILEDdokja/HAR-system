@@ -21,7 +21,11 @@ def __getattr__(name: str):
         from har.protocol.spec import ProtocolError, load_protocol
 
         return {"ProtocolError": ProtocolError, "load_protocol": load_protocol}[name]
+    if name == "SequenceValidator":
+        from har.protocol.validator import SequenceValidator
+
+        return SequenceValidator
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-__all__ = ["ProtocolError", "load_protocol", "PREDICATE_VOCABULARY"]
+__all__ = ["ProtocolError", "load_protocol", "SequenceValidator", "PREDICATE_VOCABULARY"]
