@@ -1,6 +1,20 @@
 # SIH26174 — Alignment Assessment & Proof-of-Life Plan
 
-Status: **plan only — no implementation started.**
+> **⚠ SUPERSEDED — read `DEVELOPMENT_PLAN.md` instead.**
+>
+> This is the original gap assessment of the pre-restructure repo, kept for the audit trail
+> of *how the repo got here*. Two of its recommendations are no longer in force:
+>
+> - **Its "D2 — fine-tune `yolo11n`" tier-2 item is cancelled.** There is no GPU and no
+>   time. Nothing in this project trains a model. The protocol's objects are detected by HSV
+>   colour instead. See `DEVELOPMENT_PLAN.md` §2.
+> - **Its "Track A/B/C" naming became "Person A/B/C"**, and the work is now numbered A1–A10,
+>   B1–B9, C1–C12 so each person can execute their list top to bottom.
+>
+> The alignment scorecard in §2 below is still accurate as a description of the *original*
+> repo and is the reason the restructure happened.
+
+Status: **historical — assessment only.**
 Repo state assessed at commit `19c5436` on branch `arena/01a062b8-har-system`.
 
 ---

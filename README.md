@@ -27,21 +27,25 @@ streamed video — with no ground station in the loop.
 
 ```
 har/
-├── contracts.py       frozen cross-track data contracts (stdlib only)
-├── app.py             CLI entrypoint                      [Track C]
-├── perception/        detection, pose, tracking, HOI      [Track B]
-├── protocol/          protocol model, sequence validator  [Track A]
-├── out/               event log, recorder, streamer, TTS  [Track C]
-└── ui/                in-frame overlay, browser GUI       [Track C]
+├── contracts.py       frozen cross-person data contracts (stdlib only)
+├── app.py             CLI entrypoint                      [Person C]
+├── perception/        colour detection, pose, tracking    [Person B]
+├── protocol/          protocol model, sequence validator  [Person A]
+├── out/               event log, recorder, streamer, TTS  [Person C]
+└── ui/                in-frame overlay, browser GUI       [Person C]
 protocols/             PTS-01 procedure definition
-config/                tracker tuning
-models/                YOLO weights
+config/                tracker tuning + HSV colour ranges
+models/                pretrained YOLO weights (read-only)
 tests/                 unit tests + JSON fixtures
-tools/                 dataset capture, synthetic video, replay
+tools/                 fps probe, synthetic video, replay, evaluate
 ```
 
-Tracks own disjoint file sets, so three people work in parallel without merge conflicts.
+The three people own disjoint file sets, so they work in parallel without merge conflicts.
 `har/contracts.py` and `protocols/pts01.yaml` are the only shared files.
+
+**No model training is in scope.** Protocol objects are detected by HSV colour, not by a
+network we train — see `docs/DEVELOPMENT_PLAN.md` §2 for the reasoning and for how we state
+the gap honestly.
 
 ## Development setup
 
