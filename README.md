@@ -31,7 +31,7 @@ One image, one published port, no host Python:
 ```bash
 docker build -t sih26174-har .          # CPU image
 docker compose up -d                    # GUI + MJPEG stream on http://localhost:8080
-docker compose logs -f                  # artefacts land in ./runs/latest/
+docker compose logs -f                  # artefacts land in the har-runs named volume
 
 docker compose --profile camera up -d har-camera        # live webcam
 docker compose -f docker-compose.yml -f compose.gpu.yml up -d   # NVIDIA GPU
