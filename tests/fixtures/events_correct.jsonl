@@ -1,0 +1,17 @@
+{"t_iso":"2026-09-03T09:00:00+05:30","t_rel":0.5,"frame_index":15,"step_id":"PRESENT_TRAY","step_index":1,"event":"STARTED","status":"IN_PROGRESS","message":"Step 1 started","confidence":1.0}
+{"t_iso":"2026-09-03T09:00:01+05:30","t_rel":1.75,"frame_index":30,"step_id":"PRESENT_TRAY","step_index":1,"event":"COMPLETED","status":"OK","message":"Step 1 confirmed","confidence":0.94}
+{"t_iso":"2026-09-03T09:00:02+05:30","t_rel":2.1,"frame_index":45,"step_id":"OPEN_TRAY","step_index":2,"event":"STARTED","status":"IN_PROGRESS","message":"Step 2 started","confidence":1.0}
+{"t_iso":"2026-09-03T09:00:04+05:30","t_rel":4.1,"frame_index":69,"step_id":"OPEN_TRAY","step_index":2,"event":"COMPLETED","status":"OK","message":"Step 2 confirmed","confidence":0.94}
+{"t_iso":"2026-09-03T09:00:06+05:30","t_rel":6.4,"frame_index":84,"step_id":"EXTRACT_RED","step_index":3,"event":"STARTED","status":"IN_PROGRESS","message":"Step 3 started","confidence":1.0}
+{"t_iso":"2026-09-03T09:00:09+05:30","t_rel":9.733,"frame_index":124,"step_id":"EXTRACT_RED","step_index":3,"event":"COMPLETED","status":"OK","message":"Step 3 confirmed","confidence":0.94}
+{"t_iso":"2026-09-03T09:00:11+05:30","t_rel":11.0,"frame_index":139,"step_id":"VERIFY_RED_PLACED","step_index":4,"event":"STARTED","status":"IN_PROGRESS","message":"Step 4 started","confidence":1.0}
+{"t_iso":"2026-09-03T09:00:13+05:30","t_rel":13.5,"frame_index":169,"step_id":"VERIFY_RED_PLACED","step_index":4,"event":"COMPLETED","status":"OK","message":"Step 4 confirmed","confidence":0.94}
+{"t_iso":"2026-09-03T09:00:15+05:30","t_rel":15.3,"frame_index":184,"step_id":"EXTRACT_BLUE","step_index":5,"event":"STARTED","status":"IN_PROGRESS","message":"Step 5 started","confidence":1.0}
+{"t_iso":"2026-09-03T09:00:18+05:30","t_rel":18.467,"frame_index":222,"step_id":"EXTRACT_BLUE","step_index":5,"event":"COMPLETED","status":"OK","message":"Step 5 confirmed","confidence":0.94}
+{"t_iso":"2026-09-03T09:00:20+05:30","t_rel":20.1,"frame_index":237,"step_id":"VERIFY_BLUE_PLACED","step_index":6,"event":"STARTED","status":"IN_PROGRESS","message":"Step 6 started","confidence":1.0}
+{"t_iso":"2026-09-03T09:00:22+05:30","t_rel":22.6,"frame_index":267,"step_id":"VERIFY_BLUE_PLACED","step_index":6,"event":"COMPLETED","status":"OK","message":"Step 6 confirmed","confidence":0.94}
+{"t_iso":"2026-09-03T09:00:24+05:30","t_rel":24.6,"frame_index":282,"step_id":"SAMPLE_TRANSFER","step_index":7,"event":"STARTED","status":"IN_PROGRESS","message":"Step 7 started","confidence":1.0}
+{"t_iso":"2026-09-03T09:00:27+05:30","t_rel":27.517,"frame_index":317,"step_id":"SAMPLE_TRANSFER","step_index":7,"event":"COMPLETED","status":"OK","message":"Step 7 confirmed","confidence":0.94}
+{"t_iso":"2026-09-03T09:00:29+05:30","t_rel":29.2,"frame_index":332,"step_id":"STOW_AND_CLOSE","step_index":8,"event":"STARTED","status":"IN_PROGRESS","message":"Step 8 started","confidence":1.0}
+{"t_iso":"2026-09-03T09:00:30+05:30","t_rel":30.867,"frame_index":352,"step_id":"STOW_AND_CLOSE","step_index":8,"event":"COMPLETED","status":"OK","message":"Step 8 confirmed","confidence":0.94}
+{"t_iso":"2026-09-03T09:00:31+05:30","t_rel":30.87,"frame_index":357,"step_id":"STOW_AND_CLOSE","step_index":8,"event":"PROTOCOL_COMPLETE","status":"OK","message":"Protocol PTS-01 completed with no violations","confidence":1.0}

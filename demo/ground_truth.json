@@ -1,0 +1,735 @@
+{
+  "protocol_id": "PTS-01",
+  "protocol_version": "1.0.0",
+  "contract_version": "1.0.0",
+  "annotator": "Person A",
+  "annotated_at": "2026-09-02",
+  "fps": 15.0,
+  "frame_size": [
+    640,
+    480
+  ],
+  "notes": "Hand-annotated true start/end of each PTS-01 step, in seconds from the start of the recording (t_rel).  t_start/t_end describe the operator's actions, not the validator's hold delay \u2014 A9 scores latency as (COMPLETED t_rel) - t_end.  The mp4 files are scripted stand-ins for webcam captures: this host has no camera and C7's recorder is not on the branch.  They share the evidence timeline, so `--source demo/correct.mp4` and a validator replay of demo/correct_evidence.json produce the same step log.",
+  "runs": {
+    "correct": {
+      "video": "demo/correct.mp4",
+      "evidence": "demo/correct_evidence.json",
+      "scenario": "all eight steps in index order",
+      "duration_s": 16.333,
+      "frame_count": 246,
+      "fps": 15.0,
+      "frame_size": [
+        640,
+        480
+      ],
+      "steps": [
+        {
+          "step_id": "PRESENT_TRAY",
+          "index": 1,
+          "t_start": 0.0,
+          "t_end": 1.0,
+          "frame_start": 0,
+          "frame_end": 15,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "COMPLETED",
+          "validator_started_s": 0.0,
+          "validator_completed_s": 0.933,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "OPEN_TRAY",
+          "index": 2,
+          "t_start": 1.0,
+          "t_end": 2.0,
+          "frame_start": 15,
+          "frame_end": 30,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "COMPLETED",
+          "validator_started_s": 0.933,
+          "validator_completed_s": 1.933,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "EXTRACT_RED",
+          "index": 3,
+          "t_start": 2.0,
+          "t_end": 4.0,
+          "frame_start": 30,
+          "frame_end": 60,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "COMPLETED",
+          "validator_started_s": 1.933,
+          "validator_completed_s": 4.2,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "VERIFY_RED_PLACED",
+          "index": 4,
+          "t_start": 4.0,
+          "t_end": 6.0,
+          "frame_start": 60,
+          "frame_end": 90,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "COMPLETED",
+          "validator_started_s": 4.2,
+          "validator_completed_s": 6.0,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "EXTRACT_BLUE",
+          "index": 5,
+          "t_start": 6.0,
+          "t_end": 8.0,
+          "frame_start": 90,
+          "frame_end": 120,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "COMPLETED",
+          "validator_started_s": 6.0,
+          "validator_completed_s": 8.2,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "VERIFY_BLUE_PLACED",
+          "index": 6,
+          "t_start": 8.0,
+          "t_end": 10.0,
+          "frame_start": 120,
+          "frame_end": 150,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "COMPLETED",
+          "validator_started_s": 8.2,
+          "validator_completed_s": 10.0,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "SAMPLE_TRANSFER",
+          "index": 7,
+          "t_start": 10.0,
+          "t_end": 12.0,
+          "frame_start": 150,
+          "frame_end": 180,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "COMPLETED",
+          "validator_started_s": 10.0,
+          "validator_completed_s": 12.2,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "STOW_AND_CLOSE",
+          "index": 8,
+          "t_start": 12.0,
+          "t_end": 14.5,
+          "frame_start": 180,
+          "frame_end": 218,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "COMPLETED",
+          "validator_started_s": 12.2,
+          "validator_completed_s": 15.4,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        }
+      ],
+      "expected": {
+        "completed": [
+          "PRESENT_TRAY",
+          "OPEN_TRAY",
+          "EXTRACT_RED",
+          "VERIFY_RED_PLACED",
+          "EXTRACT_BLUE",
+          "VERIFY_BLUE_PLACED",
+          "SAMPLE_TRANSFER",
+          "STOW_AND_CLOSE"
+        ],
+        "skipped": [],
+        "violations": [],
+        "protocol_complete": true,
+        "events": [
+          {
+            "t_rel": 0.0,
+            "frame_index": 0,
+            "step_id": "PRESENT_TRAY",
+            "step_index": 1,
+            "event": "STARTED",
+            "status": "IN_PROGRESS",
+            "message": "Step 1 started"
+          },
+          {
+            "t_rel": 0.933,
+            "frame_index": 14,
+            "step_id": "PRESENT_TRAY",
+            "step_index": 1,
+            "event": "COMPLETED",
+            "status": "OK",
+            "message": "Step 1 confirmed"
+          },
+          {
+            "t_rel": 0.933,
+            "frame_index": 14,
+            "step_id": "OPEN_TRAY",
+            "step_index": 2,
+            "event": "STARTED",
+            "status": "IN_PROGRESS",
+            "message": "Step 2 started"
+          },
+          {
+            "t_rel": 1.933,
+            "frame_index": 29,
+            "step_id": "OPEN_TRAY",
+            "step_index": 2,
+            "event": "COMPLETED",
+            "status": "OK",
+            "message": "Step 2 confirmed"
+          },
+          {
+            "t_rel": 1.933,
+            "frame_index": 29,
+            "step_id": "EXTRACT_RED",
+            "step_index": 3,
+            "event": "STARTED",
+            "status": "IN_PROGRESS",
+            "message": "Step 3 started"
+          },
+          {
+            "t_rel": 4.2,
+            "frame_index": 63,
+            "step_id": "EXTRACT_RED",
+            "step_index": 3,
+            "event": "COMPLETED",
+            "status": "OK",
+            "message": "Step 3 confirmed"
+          },
+          {
+            "t_rel": 4.2,
+            "frame_index": 63,
+            "step_id": "VERIFY_RED_PLACED",
+            "step_index": 4,
+            "event": "STARTED",
+            "status": "IN_PROGRESS",
+            "message": "Step 4 started"
+          },
+          {
+            "t_rel": 6.0,
+            "frame_index": 90,
+            "step_id": "VERIFY_RED_PLACED",
+            "step_index": 4,
+            "event": "COMPLETED",
+            "status": "OK",
+            "message": "Step 4 confirmed"
+          },
+          {
+            "t_rel": 6.0,
+            "frame_index": 90,
+            "step_id": "EXTRACT_BLUE",
+            "step_index": 5,
+            "event": "STARTED",
+            "status": "IN_PROGRESS",
+            "message": "Step 5 started"
+          },
+          {
+            "t_rel": 8.2,
+            "frame_index": 123,
+            "step_id": "EXTRACT_BLUE",
+            "step_index": 5,
+            "event": "COMPLETED",
+            "status": "OK",
+            "message": "Step 5 confirmed"
+          },
+          {
+            "t_rel": 8.2,
+            "frame_index": 123,
+            "step_id": "VERIFY_BLUE_PLACED",
+            "step_index": 6,
+            "event": "STARTED",
+            "status": "IN_PROGRESS",
+            "message": "Step 6 started"
+          },
+          {
+            "t_rel": 10.0,
+            "frame_index": 150,
+            "step_id": "VERIFY_BLUE_PLACED",
+            "step_index": 6,
+            "event": "COMPLETED",
+            "status": "OK",
+            "message": "Step 6 confirmed"
+          },
+          {
+            "t_rel": 10.0,
+            "frame_index": 150,
+            "step_id": "SAMPLE_TRANSFER",
+            "step_index": 7,
+            "event": "STARTED",
+            "status": "IN_PROGRESS",
+            "message": "Step 7 started"
+          },
+          {
+            "t_rel": 12.2,
+            "frame_index": 183,
+            "step_id": "SAMPLE_TRANSFER",
+            "step_index": 7,
+            "event": "COMPLETED",
+            "status": "OK",
+            "message": "Step 7 confirmed"
+          },
+          {
+            "t_rel": 12.2,
+            "frame_index": 183,
+            "step_id": "STOW_AND_CLOSE",
+            "step_index": 8,
+            "event": "STARTED",
+            "status": "IN_PROGRESS",
+            "message": "Step 8 started"
+          },
+          {
+            "t_rel": 15.4,
+            "frame_index": 231,
+            "step_id": "STOW_AND_CLOSE",
+            "step_index": 8,
+            "event": "COMPLETED",
+            "status": "OK",
+            "message": "Step 8 confirmed"
+          },
+          {
+            "t_rel": 15.4,
+            "frame_index": 231,
+            "step_id": "STOW_AND_CLOSE",
+            "step_index": 8,
+            "event": "PROTOCOL_COMPLETE",
+            "status": "OK",
+            "message": "Protocol PTS-01 completed with no violations"
+          }
+        ]
+      }
+    },
+    "skip": {
+      "video": "demo/skip.mp4",
+      "evidence": "demo/skip_evidence.json",
+      "scenario": "red box omitted; blue placed first",
+      "duration_s": 11.333,
+      "frame_count": 171,
+      "fps": 15.0,
+      "frame_size": [
+        640,
+        480
+      ],
+      "steps": [
+        {
+          "step_id": "PRESENT_TRAY",
+          "index": 1,
+          "t_start": 0.0,
+          "t_end": 1.0,
+          "frame_start": 0,
+          "frame_end": 15,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "COMPLETED",
+          "validator_started_s": 0.0,
+          "validator_completed_s": 0.933,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "OPEN_TRAY",
+          "index": 2,
+          "t_start": 1.0,
+          "t_end": 2.0,
+          "frame_start": 15,
+          "frame_end": 30,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "COMPLETED",
+          "validator_started_s": 0.933,
+          "validator_completed_s": 1.933,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "EXTRACT_RED",
+          "index": 3,
+          "t_start": null,
+          "t_end": null,
+          "frame_start": null,
+          "frame_end": null,
+          "operator_outcome": "SKIPPED",
+          "validator_outcome": "INCOMPLETE",
+          "validator_started_s": 1.933,
+          "validator_completed_s": null,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "VERIFY_RED_PLACED",
+          "index": 4,
+          "t_start": null,
+          "t_end": null,
+          "frame_start": null,
+          "frame_end": null,
+          "operator_outcome": "NOT_PERFORMED",
+          "validator_outcome": "NOT_PERFORMED",
+          "validator_started_s": null,
+          "validator_completed_s": null,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "EXTRACT_BLUE",
+          "index": 5,
+          "t_start": 2.0,
+          "t_end": 4.0,
+          "frame_start": 30,
+          "frame_end": 60,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "NOT_PERFORMED",
+          "validator_started_s": null,
+          "validator_completed_s": null,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": 4.0
+        },
+        {
+          "step_id": "VERIFY_BLUE_PLACED",
+          "index": 6,
+          "t_start": 4.0,
+          "t_end": 6.0,
+          "frame_start": 60,
+          "frame_end": 90,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "NOT_PERFORMED",
+          "validator_started_s": null,
+          "validator_completed_s": null,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "SAMPLE_TRANSFER",
+          "index": 7,
+          "t_start": 6.0,
+          "t_end": 7.0,
+          "frame_start": 90,
+          "frame_end": 105,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "NOT_PERFORMED",
+          "validator_started_s": null,
+          "validator_completed_s": null,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "STOW_AND_CLOSE",
+          "index": 8,
+          "t_start": 7.0,
+          "t_end": 9.5,
+          "frame_start": 105,
+          "frame_end": 142,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "NOT_PERFORMED",
+          "validator_started_s": null,
+          "validator_completed_s": null,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        }
+      ],
+      "expected": {
+        "completed": [
+          "PRESENT_TRAY",
+          "OPEN_TRAY"
+        ],
+        "skipped": [],
+        "violations": [
+          "EXTRACT_BLUE"
+        ],
+        "protocol_complete": false,
+        "events": [
+          {
+            "t_rel": 0.0,
+            "frame_index": 0,
+            "step_id": "PRESENT_TRAY",
+            "step_index": 1,
+            "event": "STARTED",
+            "status": "IN_PROGRESS",
+            "message": "Step 1 started"
+          },
+          {
+            "t_rel": 0.933,
+            "frame_index": 14,
+            "step_id": "PRESENT_TRAY",
+            "step_index": 1,
+            "event": "COMPLETED",
+            "status": "OK",
+            "message": "Step 1 confirmed"
+          },
+          {
+            "t_rel": 0.933,
+            "frame_index": 14,
+            "step_id": "OPEN_TRAY",
+            "step_index": 2,
+            "event": "STARTED",
+            "status": "IN_PROGRESS",
+            "message": "Step 2 started"
+          },
+          {
+            "t_rel": 1.933,
+            "frame_index": 29,
+            "step_id": "OPEN_TRAY",
+            "step_index": 2,
+            "event": "COMPLETED",
+            "status": "OK",
+            "message": "Step 2 confirmed"
+          },
+          {
+            "t_rel": 1.933,
+            "frame_index": 29,
+            "step_id": "EXTRACT_RED",
+            "step_index": 3,
+            "event": "STARTED",
+            "status": "IN_PROGRESS",
+            "message": "Step 3 started"
+          },
+          {
+            "t_rel": 4.0,
+            "frame_index": 60,
+            "step_id": "EXTRACT_BLUE",
+            "step_index": 5,
+            "event": "OUT_OF_ORDER",
+            "status": "VIOLATION",
+            "message": "Out of sequence. The red box must be placed before the blue box."
+          }
+        ]
+      }
+    },
+    "wrong_order": {
+      "video": "demo/wrong_order.mp4",
+      "evidence": "demo/wrong_order_evidence.json",
+      "scenario": "blue placed before red",
+      "duration_s": 12.0,
+      "frame_count": 181,
+      "fps": 15.0,
+      "frame_size": [
+        640,
+        480
+      ],
+      "steps": [
+        {
+          "step_id": "PRESENT_TRAY",
+          "index": 1,
+          "t_start": 0.0,
+          "t_end": 1.0,
+          "frame_start": 0,
+          "frame_end": 15,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "COMPLETED",
+          "validator_started_s": 0.0,
+          "validator_completed_s": 0.933,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "OPEN_TRAY",
+          "index": 2,
+          "t_start": 1.0,
+          "t_end": 2.0,
+          "frame_start": 15,
+          "frame_end": 30,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "COMPLETED",
+          "validator_started_s": 0.933,
+          "validator_completed_s": 1.933,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "EXTRACT_RED",
+          "index": 3,
+          "t_start": 4.0,
+          "t_end": 6.0,
+          "frame_start": 60,
+          "frame_end": 90,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "COMPLETED",
+          "validator_started_s": 1.933,
+          "validator_completed_s": 6.2,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "VERIFY_RED_PLACED",
+          "index": 4,
+          "t_start": null,
+          "t_end": null,
+          "frame_start": null,
+          "frame_end": null,
+          "operator_outcome": "NOT_PERFORMED",
+          "validator_outcome": "COMPLETED",
+          "validator_started_s": 6.2,
+          "validator_completed_s": 8.0,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "EXTRACT_BLUE",
+          "index": 5,
+          "t_start": 2.0,
+          "t_end": 4.0,
+          "frame_start": 30,
+          "frame_end": 60,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "INCOMPLETE",
+          "validator_started_s": 8.0,
+          "validator_completed_s": null,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": 4.0
+        },
+        {
+          "step_id": "VERIFY_BLUE_PLACED",
+          "index": 6,
+          "t_start": null,
+          "t_end": null,
+          "frame_start": null,
+          "frame_end": null,
+          "operator_outcome": "NOT_PERFORMED",
+          "validator_outcome": "NOT_PERFORMED",
+          "validator_started_s": null,
+          "validator_completed_s": null,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "SAMPLE_TRANSFER",
+          "index": 7,
+          "t_start": 6.0,
+          "t_end": 8.0,
+          "frame_start": 90,
+          "frame_end": 120,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "NOT_PERFORMED",
+          "validator_started_s": null,
+          "validator_completed_s": null,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        },
+        {
+          "step_id": "STOW_AND_CLOSE",
+          "index": 8,
+          "t_start": 8.0,
+          "t_end": 10.0,
+          "frame_start": 120,
+          "frame_end": 150,
+          "operator_outcome": "COMPLETED",
+          "validator_outcome": "NOT_PERFORMED",
+          "validator_started_s": null,
+          "validator_completed_s": null,
+          "validator_skipped_s": null,
+          "validator_out_of_order_s": null
+        }
+      ],
+      "expected": {
+        "completed": [
+          "PRESENT_TRAY",
+          "OPEN_TRAY",
+          "EXTRACT_RED",
+          "VERIFY_RED_PLACED"
+        ],
+        "skipped": [],
+        "violations": [
+          "EXTRACT_BLUE"
+        ],
+        "protocol_complete": false,
+        "events": [
+          {
+            "t_rel": 0.0,
+            "frame_index": 0,
+            "step_id": "PRESENT_TRAY",
+            "step_index": 1,
+            "event": "STARTED",
+            "status": "IN_PROGRESS",
+            "message": "Step 1 started"
+          },
+          {
+            "t_rel": 0.933,
+            "frame_index": 14,
+            "step_id": "PRESENT_TRAY",
+            "step_index": 1,
+            "event": "COMPLETED",
+            "status": "OK",
+            "message": "Step 1 confirmed"
+          },
+          {
+            "t_rel": 0.933,
+            "frame_index": 14,
+            "step_id": "OPEN_TRAY",
+            "step_index": 2,
+            "event": "STARTED",
+            "status": "IN_PROGRESS",
+            "message": "Step 2 started"
+          },
+          {
+            "t_rel": 1.933,
+            "frame_index": 29,
+            "step_id": "OPEN_TRAY",
+            "step_index": 2,
+            "event": "COMPLETED",
+            "status": "OK",
+            "message": "Step 2 confirmed"
+          },
+          {
+            "t_rel": 1.933,
+            "frame_index": 29,
+            "step_id": "EXTRACT_RED",
+            "step_index": 3,
+            "event": "STARTED",
+            "status": "IN_PROGRESS",
+            "message": "Step 3 started"
+          },
+          {
+            "t_rel": 4.0,
+            "frame_index": 60,
+            "step_id": "EXTRACT_BLUE",
+            "step_index": 5,
+            "event": "OUT_OF_ORDER",
+            "status": "VIOLATION",
+            "message": "Out of sequence. The red box must be placed before the blue box."
+          },
+          {
+            "t_rel": 6.2,
+            "frame_index": 93,
+            "step_id": "EXTRACT_RED",
+            "step_index": 3,
+            "event": "COMPLETED",
+            "status": "OK",
+            "message": "Step 3 confirmed"
+          },
+          {
+            "t_rel": 6.2,
+            "frame_index": 93,
+            "step_id": "VERIFY_RED_PLACED",
+            "step_index": 4,
+            "event": "STARTED",
+            "status": "IN_PROGRESS",
+            "message": "Step 4 started"
+          },
+          {
+            "t_rel": 8.0,
+            "frame_index": 120,
+            "step_id": "VERIFY_RED_PLACED",
+            "step_index": 4,
+            "event": "COMPLETED",
+            "status": "OK",
+            "message": "Step 4 confirmed"
+          },
+          {
+            "t_rel": 8.0,
+            "frame_index": 120,
+            "step_id": "EXTRACT_BLUE",
+            "step_index": 5,
+            "event": "STARTED",
+            "status": "IN_PROGRESS",
+            "message": "Step 5 started"
+          }
+        ]
+      }
+    }
+  }
+}
