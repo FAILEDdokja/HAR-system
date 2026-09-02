@@ -29,7 +29,10 @@
 #       read on a *later* object cannot false-trigger OUT_OF_ORDER/SKIPPED. 4
 #       frames (~0.27 s) still completes on real footage (the released object is
 #       held in its zone) and stays within the recorded evidence's satisfied
-#       span.  Re-check against demo/*.mp4 (A8) when it lands.
+#       span.  Re-checked 2026-09-02 against the A8 recording
+#       (demo/correct_evidence.json): 8/8 COMPLETED, zero violations
+#       (tools/tune_thresholds.py --evidence demo/correct_evidence.json), and
+#       the --stress sweep stays 8/8 & violation-free for dropout p <= 0.2.
 #     * Dwell steps (object_stable / settled / hands_clear) keep generous holds
 #       (15-30 frames = 1-2 s) that survive the colour detector's burst dropouts
 #       under median-of-N smoothing (config/colours.yaml, B2).

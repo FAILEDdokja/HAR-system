@@ -55,6 +55,25 @@ The script is stdlib + ``har.contracts`` + ``har.protocol`` only — no cv2,
 no numpy, no torch — so A9 runs in the same bare-environment Track A is
 allowed to use.  The generated ``docs/METRICS.md`` contains real values
 computed from the committed recordings; re-running always regenerates them.
+
+A10 — violation evidence table
+------------------------------
+``docs/DEVELOPMENT_PLAN.md`` §5 step A10 asks for ``SKIPPED``,
+``OUT_OF_ORDER`` and ``TIMEOUT`` each as a row with the actual timestamped
+log line as evidence.  This script renders that table itself, so the page
+stays complete across regenerations:
+
+* ``OUT_OF_ORDER`` / ``SKIPPED`` — taken from the first demo run that
+  emitted them (the ``skip`` run), verbatim ``StepEvent.to_json()`` lines.
+* ``TIMEOUT`` — from a deterministic *stall probe*: a fresh validator fed
+  "hands inside the envelope, but the tray never appears" frames until the
+  first step's ``timeout_s`` elapses.  The hands keep step 8's
+  ``hands_clear`` unsatisfied so the stall cannot resolve into a skip-jump;
+  with no objects present nothing else can satisfy, so the only possible
+  event is the timeout.
+
+Replays are anchored to a fixed wall-clock (``REPLAY_ANCHOR``) so the
+``t_iso`` fields in the evidence table are reproducible run to run.
 """
 
 from __future__ import annotations
@@ -63,7 +82,7 @@ import argparse
 import difflib
 import json
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -79,6 +98,11 @@ from har.protocol.validator import SequenceValidator  # noqa: E402
 DEFAULT_DEMO = REPO / "demo"
 DEFAULT_PROTOCOL = REPO / "protocols" / "pts01.yaml"
 DEFAULT_METRICS = REPO / "docs" / "METRICS.md"
+
+# Fixed wall-clock anchor for every replay, so the ``t_iso`` fields of the
+# A10 evidence rows are reproducible instead of run-time wall clock.  The
+# validation decisions themselves depend only on ``evidence.t_rel``.
+REPLAY_ANCHOR = datetime(2026, 9, 2, 10, 0, 0, tzinfo=timezone.utc)
 
 # Fields that define an event for the diff.  ``t_iso`` and ``confidence``
 # are pipeline metadata, not part of the decision log the GT records.
@@ -151,7 +175,7 @@ def replay_evidence(evidence_path: Path, spec) -> tuple[list[StepEvent], Sequenc
     """
     raw = json.loads(evidence_path.read_text(encoding="utf-8"))
     frames = [evidence_from_dict(d) for d in raw]
-    validator = SequenceValidator(spec)
+    validator = SequenceValidator(spec, start_time=REPLAY_ANCHOR)
     events: list[StepEvent] = []
     for frame in frames:
         events.extend(validator.update(frame))
@@ -426,6 +450,92 @@ def drift_check(step: dict, computed_outcome: str, events: Sequence[StepEvent]) 
 
 
 # --------------------------------------------------------------------------
+# A10 — violation evidence rows (generated, never hand-maintained)
+# --------------------------------------------------------------------------
+
+
+def stall_probe_timeout(spec, frame_size: tuple[int, int], fps: float = 15.0) -> StepEvent:
+    """Deterministic ``TIMEOUT`` evidence: replay a stalled operator.
+
+    A fresh validator is fed frames in which the operator's hands hover
+    inside the rack envelope but the tray is never presented.  The hands
+    keep step 8's ``hands_clear`` predicate unsatisfied (so the stall cannot
+    resolve into a skip-jump), and with no objects present no other step can
+    satisfy — so the only event the validator can emit is the first step's
+    ``TIMEOUT`` once its ``timeout_s`` elapses.  Pure replay: no camera, no
+    clock reads beyond the fixed ``REPLAY_ANCHOR``.
+    """
+    validator = SequenceValidator(spec, start_time=REPLAY_ANCHOR)
+    first = spec.steps[0]
+    zone = spec.zone(first.zone)
+    if zone is None:  # pragma: no cover - defensive, PTS-01 always has it
+        raise SystemExit(f"stall probe: zone {first.zone!r} missing from protocol")
+    x1, y1, x2, y2 = zone.box
+    mid = ((x1 + x2) / 2.0, (y1 + y2) / 2.0)
+    hands = (Wrist(mid, 0.9, "left"), Wrist((mid[0] + 40.0, mid[1]), 0.9, "right"))
+    budget_frames = int((first.timeout_s + 30.0) * fps) + 1
+    for i in range(budget_frames):
+        evidence = FrameEvidence(
+            frame_index=i,
+            t_rel=i / fps,
+            frame_size=frame_size,
+            objects={},
+            hands=hands,
+            hoi={},
+            rack_ready=False,
+            fps=fps,
+        )
+        for event in validator.update(evidence):
+            if event.event == "TIMEOUT":
+                return event
+    raise SystemExit("stall probe never produced a TIMEOUT — validator bug")
+
+
+def build_violation_rows(
+    spec,
+    frame_size: tuple[int, int],
+    candidates: Sequence[tuple[str, list[StepEvent]]],
+) -> list[dict]:
+    """One row per violation type, carrying the actual emitted log line.
+
+    ``candidates`` is an ordered list of ``(origin, events)`` replays.  For
+    each violation type the first candidate that emitted it supplies the row,
+    and the origin labels the scenario column.  The demo runs come first;
+    anything they do not exhibit (the demo ``skip`` operator releases the
+    blue box and steps away, so its satisfied span never reaches the hold —
+    alert only, no skip-jump) is taken from the committed A1 fixture
+    replays, which do exhibit it.  ``TIMEOUT`` comes from
+    :func:`stall_probe_timeout`, since no recording stalls on purpose.
+    """
+    rows: list[dict] = []
+    for wanted, blurb in (
+        ("OUT_OF_ORDER", "the blue box's HOI cycle is satisfied while"
+                         " EXTRACT_RED is still the current step"),
+        ("SKIPPED", "EXTRACT_BLUE's satisfied span reaches its hold while"
+                    " EXTRACT_RED is current; the cursor jumps and EXTRACT_RED"
+                    " is declared skipped"),
+    ):
+        for origin, events in candidates:
+            hit = next((e for e in events if e.event == wanted), None)
+            if hit is not None:
+                rows.append({
+                    "event": wanted,
+                    "scenario": f"`{origin}` — {blurb}",
+                    "data": hit,
+                })
+                break
+        else:  # pragma: no cover - every type is exhibited by the fixtures
+            raise SystemExit(f"no committed replay exhibits {wanted} — A10 incomplete")
+    rows.append({
+        "event": "TIMEOUT",
+        "scenario": "stall probe — hands inside the rack envelope but the"
+                    " tray never appears; the current step's timeout elapses",
+        "data": stall_probe_timeout(spec, frame_size),
+    })
+    return rows
+
+
+# --------------------------------------------------------------------------
 # Markdown rendering
 # --------------------------------------------------------------------------
 
@@ -438,7 +548,13 @@ def _fmt_pct(v) -> str:
     return "-" if v is None else f"{v * 100:.1f}%"
 
 
-def render_markdown(gt: dict, per_run: Sequence[dict], overall: dict, events_source: str) -> str:
+def render_markdown(
+    gt: dict,
+    per_run: Sequence[dict],
+    overall: dict,
+    events_source: str,
+    violation_rows: Sequence[dict] = (),
+) -> str:
     lines: list[str] = []
     add = lines.append
     today = date.today().isoformat()
@@ -553,6 +669,28 @@ def render_markdown(gt: dict, per_run: Sequence[dict], overall: dict, events_sou
         add("All three runs reproduce their ground-truth expected logs exactly — no missing,"
             " no extra, no timestamps or messages out of place.")
     add("")
+    if violation_rows:
+        add("## A10 — Violation evidence table")
+        add("")
+        add("Each violation type the validator can emit — **SKIPPED**, **OUT_OF_ORDER**, and")
+        add("**TIMEOUT** — with the actual timestamped JSONL log line from a real validator replay")
+        add("as evidence. This table is generated by `tools/evaluate.py` on every run.")
+        add("")
+        add("| Violation | Scenario | Step | t_rel | Frame | Log line (JSONL) |")
+        add("|---|---|---|---|---|---|")
+        for row in violation_rows:
+            ev: StepEvent = row["data"]
+            add(
+                f"| **{ev.event}** | {row['scenario']} | {ev.step_id} ({ev.step_index}) "
+                f"| {ev.t_rel:.3f} s | {ev.frame_index} | `{ev.to_json()}` |"
+            )
+        add("")
+        add("**How to reproduce:** rerun `tools/evaluate.py`. The `OUT_OF_ORDER` and `SKIPPED`")
+        add("lines are verbatim events from the first committed replay that exhibits each one")
+        add("(the demo runs, then the A1 fixtures); the `TIMEOUT` line is the verbatim event")
+        add("from the deterministic stall probe described in the script's docstring. Replays")
+        add("are anchored to a fixed wall-clock, so the `t_iso` fields are reproducible.")
+        add("")
     add("## Definitions and scope")
     add("")
     add("- **Step accuracy.** Per step instance (8 steps × 3 runs), the validator outcome"
@@ -614,6 +752,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     per_run: list[dict] = []
     drift: list[str] = []
+    run_events: dict[str, list[StepEvent]] = {}
     source_desc = "`demo/*_evidence.json` (committed FrameEvidence recordings)"
     strict_ok = True
 
@@ -631,6 +770,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 raise SystemExit(f"missing recording for run {run_id!r}: {evidence_path}")
             events, _validator, n_frames = replay_evidence(evidence_path, spec)
 
+        run_events[run_id] = list(events)
         metrics = compute_run_metrics(run_id, run_gt, events, n_frames)
         per_run.append(metrics)
 
@@ -643,7 +783,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             strict_ok = False
 
     overall = aggregate(per_run)
-    report = render_markdown(gt, per_run, overall, source_desc)
+
+    # A10 evidence candidates: the demo runs first (insertion order), then the
+    # A1 fixture replays for any violation type the demo runs do not exhibit.
+    candidates: list[tuple[str, list[StepEvent]]] = list(run_events.items())
+    for fixture in ("evidence_skip.json", "evidence_wrong_order.json"):
+        fixture_path = REPO / "tests" / "fixtures" / fixture
+        if fixture_path.is_file():
+            fixture_events, _, _ = replay_evidence(fixture_path, spec)
+            candidates.append((f"tests/fixtures/{fixture}", fixture_events))
+    violation_rows = build_violation_rows(spec, tuple(gt["frame_size"]), candidates)
+    report = render_markdown(gt, per_run, overall, source_desc, violation_rows)
 
     print(report, end="")
     if drift:
