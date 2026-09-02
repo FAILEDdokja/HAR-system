@@ -235,7 +235,7 @@ passed them, and never adds `--stream-port` to a `--headless` run.
 | Voice silent, banner works | Expected without an audio device.  Pass an ALSA/Pulse device into the container, or add `--no-voice` to silence the warning. |
 | `Address already in use` on 8080 | Another run holds the port.  Set `HAR_HOST_PORT`, or stop the other container. |
 | Unhealthy but logs look fine | A `--headless` run has no HTTP server; the healthcheck then checks the process.  If it reports unhealthy, the frame loop died — read `docker compose logs`. |
-| `runs/` grows without bound | `--loop` is append-only by design.  Rotate `/data` yourself, or drop `--loop` for a one-shot run. |
+| `runs/` grows without bound | `--loop` is append-only by design.  Measured on the default demo command: the recording grows **25 MB/min** (640x480@15fps, mp4v) and `events.jsonl` about 0.06 MB/min — an hour of demo is ~1.5 GB.  Rotate `/data` yourself, or drop `--loop --record` for a one-shot run. |
 
 ## Known gaps
 
