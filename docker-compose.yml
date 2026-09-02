@@ -6,8 +6,10 @@
 #   docker compose down
 #
 # Artefacts (events.jsonl, events.csv, meta.json, recordings/) are written to
-# ./runs on the host.  Every variable below has a working default; see
-# .env.example and docs/DEPLOYMENT.md.
+# /data — a Docker-managed named volume `har-runs` by default, which sidesteps
+# bind-mount ownership on Windows Docker Desktop.  Set HAR_DATA_DIR=./runs (or
+# any absolute path) to use a host bind mount instead.  Every variable below
+# has a working default; see .env.example and docs/DEPLOYMENT.md.
 
 x-har: &har
   build:
@@ -21,8 +23,9 @@ x-har: &har
   restart: unless-stopped
   # The CLI runs daemon threads (GUI server, TTS worker); give it a real PID 1.
   init: true
-  # Match the container user to the owner of the artefact directory, otherwise
-  # the bind mount below is read-only for uid 1001.
+  # A named volume is initialised with /data owned by uid 1001 (the image's
+  # user), so the defaults work everywhere.  Override HAR_UID/HAR_GID only for
+  # a bind mount whose host directory is owned by different ids.
   user: "${HAR_UID:-1001}:${HAR_GID:-1001}"
   environment:
     HAR_OUT_DIR: /data/${HAR_RUN_NAME:-latest}
@@ -31,7 +34,9 @@ x-har: &har
   ports:
     - "${HAR_HOST_PORT:-8080}:8080"
   volumes:
-    - ${HAR_DATA_DIR:-./runs}:/data
+    # Named volume by default (see the `volumes:` block below); set
+    # HAR_DATA_DIR=./runs for a bind mount on the host filesystem.
+    - ${HAR_DATA_DIR:-har-runs}:/data
   # The app finalises the recording and closes the event log on SIGTERM;
   # give it time before compose escalates to SIGKILL.
   stop_grace_period: 30s
@@ -53,3 +58,11 @@ services:
     devices:
       - /dev/video0:/dev/video0
     command: ["--source", "0", "--record"]
+
+volumes:
+  # Run artefacts live here when HAR_DATA_DIR is left at its default.  Docker
+  # manages the volume, so there is no host path to own and no bind-mount
+  # permission problem on Windows Docker Desktop; a brand-new volume is
+  # initialised with /data's image contents (owned by uid 1001).  Persists
+  # across `docker compose down`; remove with `docker compose down -v`.
+  har-runs:

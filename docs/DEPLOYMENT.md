@@ -71,14 +71,21 @@ docker compose down
 ```
 
 The default service replays `demo/correct.mp4` in a loop with `--record`, which
-is the demo that cannot fail: no camera, no GPU, no network.  Artefacts appear
-in `./runs/latest/` on the host.
+is the demo that cannot fail: no camera, no GPU, no network.  Artefacts land in
+`/data/latest` inside the container, which compose backs with the `har-runs`
+named volume (see *Artefacts, volumes and permissions*) — there is no `./runs`
+directory in your checkout, and on a Windows Docker Desktop host the named
+volume is the safe default because it has no bind-mount ownership or
+path-sharing requirements.
 
 ### docker run
 
 ```bash
 docker run --rm -p 8080:8080 -v "$PWD/runs:/data" sih26174-har
 ```
+
+`-v "$PWD/runs:/data"` is a Linux bind mount; `-v har-runs:/data` uses a Docker
+named volume instead, which also works unchanged on Windows Docker Desktop.
 
 Any arguments go straight to the CLI.  Anything whose first word is *not* a
 flag is treated as a command to run instead of CLI arguments — the entrypoint
@@ -139,15 +146,45 @@ Everything a run produces goes to `--out-dir`, which the entrypoint points at
 /data/<run>/recordings/run_<ts>.mp4
 ```
 
-`/data` is a bind mount, so it keeps the *host's* ownership.  If the container
-cannot write to it the entrypoint stops immediately and tells you which of the
-two fixes to apply:
+`/data` is a **named volume** by default.  `docker-compose.yml` declares
+`har-runs` and mounts it at `/data` via `HAR_DATA_DIR=har-runs`; Docker creates
+and owns the volume, seeding a brand-new one from the image so `/data` starts
+out owned by `har` (uid 1001).  It survives `docker compose down`, shows up in
+`docker volume ls`, and is removed by `docker compose down -v`.  Run artefacts
+land in `/data/<run>/` inside the volume, not in a `./runs` directory in your
+checkout.
+
+To keep artefacts as ordinary files on the host, opt back into a bind mount by
+setting `HAR_DATA_DIR` to a path (relative paths need a leading `./`):
+
+```bash
+echo 'HAR_DATA_DIR=./runs' >> .env    # bind mount ./runs:/data
+docker compose down && docker compose up -d
+```
+
+A bind mount keeps the *host's* ownership, so if the container cannot write to
+it the entrypoint stops immediately and tells you which fix to apply:
 
 ```bash
 chown 1001:1001 ./runs              # the image's uid, or
 echo 'HAR_UID=1000' >> .env         # your own ids (id -u / id -g)
 echo 'HAR_GID=1000' >> .env
 ```
+
+### Windows Docker Desktop
+
+On a Windows host, leave `HAR_DATA_DIR` at its `har-runs` default: a named
+volume needs no Windows path, no sharing configuration and no ownership fixup,
+and it is much faster than a bind mount across the WSL2 boundary.  If you must
+use a bind mount of a Windows directory:
+
+1. Create the directory from Windows first (e.g. `mkdir C:\har\runs`); a path
+   that only exists inside the WSL2 VM will fail to mount.
+2. Share it with the VM: Docker Desktop **Settings → Resources → File sharing**,
+   add the drive (e.g. `C:\har`) and restart Docker Desktop if prompted.
+3. Set `HAR_DATA_DIR` to the path as Docker presents it — `C:\har\runs` from
+   PowerShell, or `/c/har/runs` from Git Bash — and set `HAR_UID`/`HAR_GID` to
+   whatever owns that directory, because the host's ownership is preserved.
 
 ---
 
@@ -214,9 +251,9 @@ wheelhouse remains the offline path for a bare-metal install
 | `TORCH_CHANNEL` | `cpu` | build arg: `cpu` or `cuda` |
 | `TORCH_INDEX_URL` | `.../whl/cpu` | build arg: the torch wheel index |
 | `HAR_HOST_PORT` | `8080` | host port for the GUI/stream |
-| `HAR_DATA_DIR` | `./runs` | host directory mounted at `/data` |
+| `HAR_DATA_DIR` | `har-runs` | Docker volume name (or a `./`- or `/`-prefixed host path for a bind mount) mounted at `/data` |
 | `HAR_RUN_NAME` | `latest` | run directory under `/data` |
-| `HAR_UID` / `HAR_GID` | `1001` | container uid:gid, for bind-mount ownership |
+| `HAR_UID` / `HAR_GID` | `1001` | container uid:gid; only matters for bind mounts |
 | `HAR_EXTRA_ARGS` | empty | extra CLI flags, word-split |
 | `HAR_OUT_DIR` | `/data/latest` | in-container artefact directory |
 | `HAR_STREAM_PORT` | `8080` | port the GUI binds and the healthcheck probes |
@@ -230,12 +267,12 @@ passed them, and never adds `--stream-port` to a `--headless` run.
 
 | Symptom | Cause and fix |
 |---|---|
-| `is not writable by har (uid 1001)` | Bind-mount ownership.  See *Artefacts, volumes and permissions*. |
+| `is not writable by har (uid 1001)` | Bind-mount ownership — only reachable with `HAR_DATA_DIR=./…`; the `har-runs` named volume never hits this.  See *Artefacts, volumes and permissions*. |
 | `no /dev/video* device is visible` | Camera not passed through.  `--device /dev/video0:/dev/video0` or `--profile camera`. |
 | Voice silent, banner works | Expected without an audio device.  Pass an ALSA/Pulse device into the container, or add `--no-voice` to silence the warning. |
 | `Address already in use` on 8080 | Another run holds the port.  Set `HAR_HOST_PORT`, or stop the other container. |
 | Unhealthy but logs look fine | A `--headless` run has no HTTP server; the healthcheck then checks the process.  If it reports unhealthy, the frame loop died — read `docker compose logs`. |
-| `runs/` grows without bound | `--loop` is append-only by design.  Measured on the default demo command: the recording grows **25 MB/min** (640x480@15fps, mp4v) and `events.jsonl` about 0.06 MB/min — an hour of demo is ~1.5 GB.  Rotate `/data` yourself, or drop `--loop --record` for a one-shot run. |
+| `/data` grows without bound | `--loop` is append-only by design.  Measured on the default demo command: the recording grows **25 MB/min** (640x480@15fps, mp4v) and `events.jsonl` about 0.06 MB/min — an hour of demo is ~1.5 GB.  Rotate `/data` yourself (`docker volume rm har-runs`, or delete the bind-mount directory), or drop `--loop --record` for a one-shot run. |
 
 ## Known gaps
 
