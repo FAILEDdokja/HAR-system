@@ -82,6 +82,14 @@ WORKDIR /app
 COPY --from=builder --chown=har:har /opt/venv /opt/venv
 COPY --chown=har:har . /app
 
+# Belt and braces against a Windows build context: a CRLF checkout turns the
+# entrypoint's shebang into `/usr/bin/env bash\r`, which exits 127 the moment
+# the container starts.  .gitattributes pins these files to LF, but normalise
+# here too so the image is correct no matter what the context looks like.
+RUN sed -i 's/\r$//' /app/docker/entrypoint.sh /app/docker/healthcheck.sh \
+    && chmod 0755 /app/docker/entrypoint.sh /app/docker/healthcheck.sh \
+    && chown har:har /app/docker/entrypoint.sh /app/docker/healthcheck.sh
+
 USER har
 
 # GUI + MJPEG stream (har/ui/web.py binds 0.0.0.0 by design).

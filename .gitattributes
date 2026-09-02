@@ -1,0 +1,36 @@
+# Line-ending policy.
+#
+# A Windows clone with core.autocrlf=true checks text files out with CRLF.
+# The Dockerfile COPYs docker/entrypoint.sh into a Linux image verbatim, and
+# a CRLF shebang means PID 1 execs `/usr/bin/env bash\r` — exit 127, and the
+# container crash-loops under `restart: unless-stopped`.  Everything the
+# image or the interpreter executes is therefore pinned to LF here, so the
+# checkout is identical on every platform.
+
+* text=auto
+
+# Executed inside the Linux image / by the interpreter — must stay LF.
+*.sh            text eol=lf
+*.py            text eol=lf
+*.yaml          text eol=lf
+*.yml           text eol=lf
+Dockerfile      text eol=lf
+.dockerignore   text eol=lf
+.env.example    text eol=lf
+.gitignore      text eol=lf
+.gitattributes  text eol=lf
+
+# Data and docs — normalised to LF in the repo, checked out per platform.
+*.md            text
+*.json          text
+*.jsonl         text
+*.csv           text
+
+# Binary artefacts — never converted.
+*.mp4           binary
+*.pt            binary
+*.whl           binary
+*.onnx          binary
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
