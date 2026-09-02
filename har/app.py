@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import signal
 import sys
 import threading
 import time
@@ -70,6 +71,24 @@ HAND_HSV_HI = (16, 190, 255)
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _sigterm_to_interrupt(signum: int, _frame: Any) -> None:
+    """Turn ``SIGTERM`` into the same clean shutdown as Ctrl-C.
+
+    ``docker stop`` (and ``compose down``, and Kubernetes' pod termination)
+    sends SIGTERM, whose default action kills the process without running the
+    shutdown block in :func:`main` — which is what finalises the mp4 trailer
+    in ``VideoRecorder.close`` and flushes the event log.  Raising
+    ``KeyboardInterrupt`` from the handler routes the signal into the
+    ``except KeyboardInterrupt`` the frame loop already has, so a container
+    stop leaves a playable recording and a closed ``events.jsonl`` instead of
+    a truncated one.
+
+    Only ever installed on the main thread, which is where the frame loop
+    runs; the GUI server and the TTS worker are daemon threads.
+    """
+    raise KeyboardInterrupt
 
 
 # --------------------------------------------------------------------------
@@ -521,6 +540,11 @@ def _start_web_server(streamer, status_provider, log_tail, spec, host: str, port
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_arg_parser().parse_args(argv)
+    if hasattr(signal, "SIGTERM"):
+        try:
+            signal.signal(signal.SIGTERM, _sigterm_to_interrupt)
+        except ValueError:  # not the main thread (embedded use): leave it alone
+            pass
     if args.contract:
         print(CONTRACT_VERSION)
         return 0

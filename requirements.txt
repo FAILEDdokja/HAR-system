@@ -9,8 +9,11 @@
 # `tests/**`. Track A runs in a bare interpreter by design.
 
 # Perception (Track B) ------------------------------------------------------
-# Pinned to the version that produced the committed weights in models/.
-ultralytics==8.2.100
+# The committed weights in models/ are YOLO11, whose C3k2 block only exists
+# from ultralytics 8.3.0 on: 8.2.100 cannot load them and the pose backend
+# silently falls back to --wrists none.  8.3.0 has the same dependency set as
+# 8.2.100, so requirements.lock is unchanged apart from this pin.
+ultralytics==8.3.0
 opencv-python>=4.10,<6
 numpy>=1.26
 

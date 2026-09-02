@@ -64,7 +64,14 @@ def wrists_from_pose_result(
     xy = keypoints_obj.xy.cpu().numpy()
     conf = keypoints_obj.conf.cpu().numpy() if keypoints_obj.conf is not None else None
     wrists: list[Wrist] = []
+    highest_index = max(index for index, _ in COCO_WRIST_KEYPOINTS)
     for person_index, person in enumerate(xy):
+        # ultralytics reports "nobody detected" as a placeholder row with no
+        # keypoints at all (keypoints.xy shaped (1, 0, 2) next to empty boxes),
+        # not as zero rows — indexing wrist 9 into it raises IndexError and
+        # takes the whole frame loop down on the first empty camera frame.
+        if len(person) <= highest_index:
+            continue
         for keypoint_index, side in COCO_WRIST_KEYPOINTS:
             point = person[keypoint_index]
             if point[0] <= 0 or point[1] <= 0:

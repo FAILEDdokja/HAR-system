@@ -1,0 +1,31 @@
+# GPU override — CUDA build of the image plus device reservation.
+#
+#   docker compose -f docker-compose.yml -f compose.gpu.yml build
+#   docker compose -f docker-compose.yml -f compose.gpu.yml up -d
+#
+# Needs an NVIDIA driver and the NVIDIA Container Toolkit on the host.  The
+# cu130 channel matches requirements.lock, whose torch 2.14.0 pins the
+# nvidia-*-cu13 runtime wheels; change TORCH_INDEX_URL if you move channels.
+
+x-gpu: &gpu
+  build:
+    args:
+      TORCH_CHANNEL: cuda
+      TORCH_INDEX_URL: ${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cu130}
+  image: sih26174-har:cuda
+  environment:
+    NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+
+services:
+  har:
+    <<: *gpu
+
+  har-camera:
+    <<: *gpu
