@@ -6,8 +6,12 @@ exactly eight ``COMPLETED`` events in index order plus one
 ``PROTOCOL_COMPLETE``, with zero violations.
 
 The violation-semantics tests below (rules 3 and 4) replay the other two A1
-fixtures.  Step A5 extends this file with the timeout and ``measured=False``
-tests.
+fixtures.  Step A5 (plan §5) extends this file with the remaining done-when
+items: a stalled step emits ``TIMEOUT`` once and not twice (rule 5), and a
+``measured=False`` track never completes a step (rule 7).  Those cases need
+degenerate evidence (a step that never happens; a tracker that only coasts)
+that the A1 fixtures deliberately do not model, so they synthesise
+``FrameEvidence`` directly instead of replaying a fixture file.
 """
 
 import json
@@ -72,6 +76,39 @@ def replay(frames: list[FrameEvidence]):
 
 def events_of(events: list[StepEvent], kind: str) -> list[StepEvent]:
     return [e for e in events if e.event == kind]
+
+
+# ---------------------------------------------------------------------------
+# Synthetic evidence for the A5 tests.
+#
+# The A1 fixtures model runs where every step eventually happens, so they can
+# never exercise rule 5 (a step that stalls past ``timeout_s``) or rule 7 (a
+# tracker that only ever coasts).  These helpers build the degenerate frames
+# directly.  A wrist is kept inside the rack envelope on every frame so that
+# step 8 (``hands_clear``) cannot read an empty scene as satisfied and trip
+# the out-of-order scan while we are stalling step 1.
+# ---------------------------------------------------------------------------
+
+HAND_IN_ENVELOPE = (Wrist((320.0, 430.0), 0.95, "right"),)
+TRAY_BOX = (230.0, 240.0, 410.0, 410.0)  # centre well inside rack_roi
+FPS = 15.0
+
+
+def tray_frame(frame_index: int, *, present: bool = True, measured: bool = True) -> FrameEvidence:
+    """One frame of evidence about the tray only (all other props absent)."""
+    objects = {}
+    if present:
+        objects["tray"] = ObjectTrack(label="tray", box=TRAY_BOX, measured=measured)
+    return FrameEvidence(
+        frame_index=frame_index,
+        t_rel=frame_index / FPS,
+        frame_size=FRAME_SIZE,
+        objects=objects,
+        hands=HAND_IN_ENVELOPE,
+        hoi={"tray": "IDLE"} if present else {},
+        rack_ready=True,
+        fps=FPS,
+    )
 
 
 class ValidatorCorrectRunTests(unittest.TestCase):
@@ -206,6 +243,130 @@ class ValidatorViolationSemanticsTests(unittest.TestCase):
         more = validator.update(frames[-1])
         self.assertEqual(0, len(more))
         self.assertEqual(violations_before, validator.violations)
+
+
+class ValidatorTimeoutTests(unittest.TestCase):
+    """Rule 5 (A5 done-when): a stalled step emits TIMEOUT once and not twice."""
+
+    def test_stalled_step_times_out_exactly_once(self):
+        validator = make_validator()
+        events: list[StepEvent] = []
+        # PRESENT_TRAY has timeout_s=60.  Stall it: the tray never appears.
+        # Frame 0 enters the step (entered_at=0.0); every following second we
+        # deliver one empty frame, running 30 s *past* the deadline so the
+        # validator has plenty of chances to double-fire.
+        for second in range(0, 91):
+            frame = tray_frame(int(second * FPS), present=False)
+            events.extend(validator.update(frame))
+
+        timeouts = events_of(events, "TIMEOUT")
+        self.assertEqual(1, len(timeouts))
+        self.assertEqual("PRESENT_TRAY", timeouts[0].step_id)
+        self.assertEqual(1, timeouts[0].step_index)
+        self.assertEqual("VIOLATION", timeouts[0].status)
+        # It fires on the first frame past the deadline, not at the end.
+        self.assertEqual(61.0, timeouts[0].t_rel)
+        self.assertEqual(("PRESENT_TRAY",), validator.violations)
+        # Stalling is not skipping: no other violation kinds appear.
+        self.assertEqual(0, len(events_of(events, "SKIPPED")))
+        self.assertEqual(0, len(events_of(events, "OUT_OF_ORDER")))
+        # The step stays current, and nothing fired after the one TIMEOUT:
+        # the whole stalled run produced exactly STARTED + TIMEOUT.
+        self.assertEqual("PRESENT_TRAY", validator.current.step_id)
+        self.assertEqual(["STARTED", "TIMEOUT"], [e.event for e in events])
+
+        # ...and can still complete when the work is finally done
+        # (hold_frames=15 consecutive video frames of a stable tray).
+        base = int(91 * FPS)
+        late: list[StepEvent] = []
+        for i in range(16):
+            late.extend(validator.update(tray_frame(base + i)))
+        completed = events_of(late, "COMPLETED")
+        self.assertEqual(1, len(completed))
+        self.assertEqual("PRESENT_TRAY", completed[0].step_id)
+        # Completing late does not clear the recorded violation.
+        self.assertEqual(("PRESENT_TRAY",), validator.violations)
+        # And no further TIMEOUT was emitted for the step on the way out.
+        self.assertEqual(0, len(events_of(late, "TIMEOUT")))
+
+    def test_timeout_reflected_in_status(self):
+        validator = make_validator()
+        validator.update(tray_frame(0, present=False))
+        events = validator.update(tray_frame(int(61 * FPS), present=False))
+        timeouts = events_of(events, "TIMEOUT")
+        self.assertEqual(1, len(timeouts))
+        status = validator.status()
+        self.assertEqual("IN_PROGRESS", status.state)
+        self.assertEqual("PRESENT_TRAY", status.current_step_id)
+        self.assertEqual(("PRESENT_TRAY",), status.violations)
+        self.assertEqual(timeouts[0].message, status.last_alert)
+
+
+class ValidatorMeasuredFalseTests(unittest.TestCase):
+    """Rule 7 (A5 done-when): a ``measured=False`` track never completes a step."""
+
+    def test_coasting_track_never_completes_a_step(self):
+        validator = make_validator()
+        events: list[StepEvent] = []
+        # The tray sits perfectly inside the rack envelope for 45 consecutive
+        # video frames — three times PRESENT_TRAY's hold_frames=15 — but the
+        # tracker is coasting the whole time.  A predicted box is an estimate;
+        # it must not confirm the step.
+        for i in range(45):
+            events.extend(validator.update(tray_frame(i, measured=False)))
+
+        self.assertEqual(0, len(events_of(events, "COMPLETED")))
+        self.assertEqual("PRESENT_TRAY", validator.current.step_id)
+        self.assertEqual((), validator.completed_steps)
+        # Only the initial STARTED was emitted; coasting is not a violation.
+        self.assertEqual(1, len(events))
+        self.assertEqual("STARTED", events[0].event)
+
+    def test_completion_requires_a_fresh_measured_hold(self):
+        validator = make_validator()
+        for i in range(45):
+            validator.update(tray_frame(i, measured=False))
+        # Once real measurements resume, the hold must be re-earned from the
+        # measured frames alone: 14 measured frames after 45 coasted ones is
+        # still short of hold_frames=15...
+        events: list[StepEvent] = []
+        for i in range(45, 59):
+            events.extend(validator.update(tray_frame(i, measured=True)))
+        self.assertEqual(0, len(events_of(events, "COMPLETED")))
+        # ...and the 15th measured frame completes the step.
+        events = validator.update(tray_frame(59, measured=True))
+        completed = events_of(events, "COMPLETED")
+        self.assertEqual(1, len(completed))
+        self.assertEqual("PRESENT_TRAY", completed[0].step_id)
+        self.assertEqual((), validator.violations)
+
+    def test_coasting_track_never_triggers_a_skip_jump(self):
+        # Second half of rule 7: a later step must not be *jumped to* on a
+        # coasted box either.  Present a coasting red box already sitting in
+        # zone A (step 3's work, apparently done) while step 1 is unsatisfied.
+        validator = make_validator()
+        red_in_zone_a = ObjectTrack(
+            label="red_box", box=(100.0, 250.0, 140.0, 290.0), measured=False
+        )
+        events: list[StepEvent] = []
+        for i in range(30):
+            events.extend(
+                validator.update(
+                    FrameEvidence(
+                        frame_index=i,
+                        t_rel=i / FPS,
+                        frame_size=FRAME_SIZE,
+                        objects={"red_box": red_in_zone_a},
+                        hands=HAND_IN_ENVELOPE,
+                        hoi={"red_box": "RELEASED"},
+                        rack_ready=True,
+                        fps=FPS,
+                    )
+                )
+            )
+        self.assertEqual(0, len(events_of(events, "OUT_OF_ORDER")))
+        self.assertEqual(0, len(events_of(events, "SKIPPED")))
+        self.assertEqual("PRESENT_TRAY", validator.current.step_id)
 
 
 class ValidatorInterfaceTests(unittest.TestCase):
