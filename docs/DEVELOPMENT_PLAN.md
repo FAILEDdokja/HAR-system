@@ -120,6 +120,27 @@ What we do instead, and why it is still a strong submission:
 `models/pts01_best.pt`, no background training terminal. If anyone finds themselves
 labelling images, they have drifted — stop and pick up their next step.
 
+### Are any model changes required? No.
+
+Both weights are already committed and already correct. I unpickled them and read the
+pickles directly:
+
+| File | ultralytics version | Head | Classes | Used for |
+|---|---|---|---|---|
+| `models/yolo11n.pt` | 8.2.100 | detection only | COCO-80 (`0 = person`, `39 = bottle`, …) | **nothing — see below** |
+| `models/yolo11n-pose.pt` | 8.2.100 | **pose head present** (`kpt_shape`) | 1 (`person`) | wrists, and the person gate |
+
+**Nothing to train, nothing to download, nothing to convert.** Both were saved by
+ultralytics **8.2.100**, which is exactly what `requirements.txt` pins — so there is no
+version mismatch waiting to bite on the demo machine.
+
+**One simplification worth making (B4).** `yolo11n-pose` already detects the `person` class
+*and* returns keypoints, so it can serve both the wrist extraction and the "is an operator
+in frame?" gate. That means **`yolo11n.pt` does not need to be loaded at all** — one
+inference pass per frame instead of two, and one fewer model in memory. Drop it from the
+runtime path; leave the file in the repo as a spare. The protocol objects come from colour,
+never from either network.
+
 ---
 
 ## 3. Architecture and file ownership
@@ -148,22 +169,35 @@ HAR-system/
 
 ### Ownership rules — this is the entire coordination protocol
 
-| Person | Owns | May **not** touch | Dependencies |
+| Person | Owns (only you write here) | May **not** touch | Dependencies |
 |---|---|---|---|
-| **A — Cognition** | `har/protocol/**`, `protocols/*.yaml`, `tools/evaluate.py`, `demo/`, `tests/test_protocol_*.py`, `tests/test_predicates.py`, `tests/test_validator.py` | `har/perception/**`, `har/out/**`, `har/ui/**`, `har/app.py` | **PyYAML only** |
-| **B — Perception** | `har/perception/**`, `config/colours.yaml`, `tools/probe_fps.py`, `tests/test_perception*.py` | `har/protocol/**`, `har/out/**`, `har/ui/**`, `har/app.py` | ultralytics, opencv, numpy |
-| **C — Output & interface** | `har/out/**`, `har/ui/**`, `har/app.py`, `tools/replay_events.py`, `tools/make_synthetic_video.py`, `tests/test_out*.py` | `har/perception/**`, `har/protocol/**` | flask, pyttsx3, opencv |
+| **A — Cognition** | `har/protocol/**` · `protocols/*.yaml` · `tools/evaluate.py` · `demo/` · `docs/METRICS.md` · `tests/test_protocol_config.py`, `tests/test_predicates.py`, `tests/test_validator.py` | `har/perception/**`, `har/out/**`, `har/ui/**`, `har/app.py`, `docs/PERF.md` | **PyYAML only** |
+| **B — Perception** | `har/perception/**` · `config/colours.yaml` · `tools/probe_fps.py` · `docs/PERF.md` · `tests/test_perception_geometry.py`, `_tracker.py`, `_interaction.py`, `_adapters.py`, `_color_detector.py` | `har/protocol/**`, `har/out/**`, `har/ui/**`, `har/app.py`, `docs/METRICS.md` | ultralytics, opencv, numpy |
+| **C — Output & interface** | `har/out/**` · `har/ui/**` · `har/app.py` · `tools/replay_events.py`, `tools/make_synthetic_video.py` · `README.md` · `requirements.lock` · `wheelhouse/` · `tests/test_out_eventlog.py`, `tests/test_out_speaker.py` | `har/perception/**`, `har/protocol/**` | flask, pyttsx3, opencv |
 
-**Shared files** — `har/contracts.py`, `protocols/pts01.yaml`, `config/bytetrack.yaml`,
-`requirements.txt`. To change one: post it in the group chat first and log it in §12.
+The globs are not theoretical — the test files on disk are already named to match them, so
+`ls tests/` tells you who owns what. Nobody renames a test file that is not theirs.
 
-**Import direction, one-way:**
+**Shared files — post in the group chat before editing, and log it in §12:**
+`har/contracts.py` · `tests/test_contracts.py` · `protocols/pts01.yaml` ·
+`config/bytetrack.yaml` · `requirements.txt` · `.gitignore`.
+
+`docs/METRICS.md` (A) and `docs/PERF.md` (B) are deliberately two files. Three people
+writing one metrics file is a guaranteed merge conflict, and a merge conflict at 17:00 is
+how demos get lost.
+
+**Import direction:**
 
 ```
-C ──► contracts ◄── A          B ──► contracts
-A ──X──► B     (A never imports perception)
-C ──X──► B, A  (C never imports perception or protocol internals)
+A ──► contracts            A imports PyYAML + contracts. Nothing else.
+B ──► contracts
+C ──► contracts            in har/out/** and har/ui/**
 ```
+
+**`har/app.py` is the single exception and the only composition root.** It — and nothing
+else in C's tree — imports `PerceptionStack` and `SequenceValidator`. If you find yourself
+importing perception or protocol inside `har/out/` or `har/ui/`, stop: pass the data in
+instead.
 
 Person A's package must stay importable with **no cv2, torch or ultralytics installed**.
 `tests/test_contracts.py` fails the build if that breaks. This is what lets A finish and
@@ -328,12 +362,13 @@ timestamped log line as evidence.
 
 ### B1 — Measure what the hardware can do · 20 min · Phase 1
 
-**Files:** `tools/probe_fps.py`, `docs/METRICS.md`
+**Files:** `tools/probe_fps.py`, `docs/PERF.md`
 
-**Do:** time `yolo11n-pose` alone and with a second detection pass, at `imgsz` 480 and 640.
+**Do:** time `yolo11n-pose` alone, with and without the `person`-gate optimisation from §2,
+at `imgsz` 480 and 640.
 
-**Done when:** four FPS numbers are written into `docs/METRICS.md`. Everything downstream
-is sized from this, so do not skip it.
+**Done when:** the numbers are written into `docs/PERF.md` — **your** file, not A's
+`docs/METRICS.md`. Everything downstream is sized from this, so do not skip it.
 
 ### B2 — Colour detector · 75 min · Phase 1
 
@@ -406,7 +441,7 @@ we track relative to the payload rack, not to gravity.
 ### B9 — ONNX export and latency · 30 min · Phase 3 · *optional*
 
 **Done when:** `model.export(format="onnx")` succeeds and CPU-vs-ONNX latency is a row in
-`docs/METRICS.md`. First thing to cut if time runs short.
+`docs/PERF.md`. First thing to cut if time runs short.
 
 ---
 
@@ -465,8 +500,14 @@ they must exist before the 12:15 gate.*
 **Do:** `main()` wiring frame source → perception → validator → sinks. Every flag in
 Appendix A. `--source` accepts a camera index **or** a file path.
 
-**Done when:** `--help` works, and `--headless --source <file>` runs to completion and
-writes `events.jsonl`, `events.csv` and `meta.json` into `--out-dir`.
+**A4 and B4 land at the same moment you do, so do not wait for them.** Build `main()` with
+two tiny stubs in `har/app.py` itself — a `StubPerception` that replays A1's evidence
+fixtures and a `StubValidator` that replays `tests/fixtures/events_correct.jsonl` — behind
+`--stub`. Write the real imports last, in the final 10 minutes, and swap them in at G1.
+
+**Done when:** `--help` works; `--headless --stub` runs to completion; and
+`--headless --source <file>` writes `events.jsonl`, `events.csv` and `meta.json` into
+`--out-dir` once the real components are wired.
 
 ### C6 — Output tests · 20 min · Phase 1
 
@@ -600,8 +641,8 @@ gate.**
 
 ### Gate G3 — rehearsed (17:45)
 
-`docs/METRICS.md` has real numbers; the 90° rotation works on camera; the machine is
-disconnected from the network and the demo still runs end to end.
+`docs/METRICS.md` (A) and `docs/PERF.md` (B) both hold real numbers; the 90° rotation works
+on camera; the machine is disconnected from the network and the demo still runs end to end.
 
 ### Cut order when time runs out
 
@@ -638,7 +679,7 @@ submission.
 6. **3:00** Put the laptop in airplane mode. Re-run. Still works: offline standalone.
 7. **3:20** *If B7/B8 landed:* rotate the rig 90° and show the sequence still validates —
    "we track relative to the payload rack, not to gravity."
-8. **3:40** `docs/METRICS.md`: step accuracy, false-alarm rate, FPS on CPU.
+8. **3:40** `docs/METRICS.md` and `docs/PERF.md`: step accuracy, false-alarm rate, FPS on CPU.
 
 ---
 
