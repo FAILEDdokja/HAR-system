@@ -10,10 +10,10 @@
       "tray": {
         "label": "tray",
         "box": [
-          230.0,
-          240.0,
-          410.0,
-          410.0
+          210.0,
+          238.0,
+          430.0,
+          418.0
         ],
         "measured": true,
         "lost_frames": 0
@@ -50,17 +50,6 @@
         ],
         "measured": true,
         "lost_frames": 0
-      },
-      "vial": {
-        "label": "vial",
-        "box": [
-          270.0,
-          280.0,
-          290.0,
-          300.0
-        ],
-        "measured": true,
-        "lost_frames": 0
       }
     },
     "hands": [
@@ -78,8 +67,7 @@
       "tray": "IDLE",
       "tray_lid": "IDLE",
       "red_box": "IDLE",
-      "blue_box": "IDLE",
-      "vial": "IDLE"
+      "blue_box": "IDLE"
     },
     "rack_ready": true,
     "fps": 15.0
@@ -95,10 +83,10 @@
       "tray": {
         "label": "tray",
         "box": [
-          230.0,
-          240.0,
-          410.0,
-          410.0
+          210.0,
+          238.0,
+          430.0,
+          418.0
         ],
         "measured": true,
         "lost_frames": 0
@@ -132,17 +120,6 @@
           260.0,
           390.0,
           320.0
-        ],
-        "measured": true,
-        "lost_frames": 0
-      },
-      "vial": {
-        "label": "vial",
-        "box": [
-          270.0,
-          280.0,
-          290.0,
-          300.0
         ],
         "measured": true,
         "lost_frames": 0
@@ -163,8 +140,7 @@
       "tray": "IDLE",
       "tray_lid": "IDLE",
       "red_box": "IDLE",
-      "blue_box": "IDLE",
-      "vial": "IDLE"
+      "blue_box": "IDLE"
     },
     "rack_ready": true,
     "fps": 15.0
@@ -180,10 +156,10 @@
       "tray": {
         "label": "tray",
         "box": [
-          230.0,
-          240.0,
-          410.0,
-          410.0
+          210.0,
+          238.0,
+          430.0,
+          418.0
         ],
         "measured": true,
         "lost_frames": 0
@@ -220,24 +196,13 @@
         ],
         "measured": true,
         "lost_frames": 0
-      },
-      "vial": {
-        "label": "vial",
-        "box": [
-          270.0,
-          280.0,
-          290.0,
-          300.0
-        ],
-        "measured": true,
-        "lost_frames": 0
       }
     },
     "hands": [
       {
         "point": [
           320.0,
-          110.0
+          430.0
         ],
         "confidence": 0.95,
         "side": "right",
@@ -248,8 +213,7 @@
       "tray": "IDLE",
       "tray_lid": "CARRYING",
       "red_box": "IDLE",
-      "blue_box": "IDLE",
-      "vial": "IDLE"
+      "blue_box": "IDLE"
     },
     "rack_ready": true,
     "fps": 15.0
@@ -265,10 +229,10 @@
       "tray": {
         "label": "tray",
         "box": [
-          230.0,
-          240.0,
-          410.0,
-          410.0
+          210.0,
+          238.0,
+          430.0,
+          418.0
         ],
         "measured": true,
         "lost_frames": 0
@@ -298,21 +262,10 @@
       "blue_box": {
         "label": "blue_box",
         "box": [
-          400.0,
+          200.0,
           260.0,
-          460.0,
+          260.0,
           320.0
-        ],
-        "measured": true,
-        "lost_frames": 0
-      },
-      "vial": {
-        "label": "vial",
-        "box": [
-          270.0,
-          280.0,
-          290.0,
-          300.0
         ],
         "measured": true,
         "lost_frames": 0
@@ -321,8 +274,8 @@
     "hands": [
       {
         "point": [
-          430.0,
-          290.0
+          320.0,
+          430.0
         ],
         "confidence": 0.95,
         "side": "right",
@@ -333,8 +286,7 @@
       "tray": "IDLE",
       "tray_lid": "IDLE",
       "red_box": "IDLE",
-      "blue_box": "PICKED UP",
-      "vial": "IDLE"
+      "blue_box": "PICKED UP"
     },
     "rack_ready": true,
     "fps": 15.0
@@ -350,10 +302,10 @@
       "tray": {
         "label": "tray",
         "box": [
-          230.0,
-          240.0,
-          410.0,
-          410.0
+          210.0,
+          238.0,
+          430.0,
+          418.0
         ],
         "measured": true,
         "lost_frames": 0
@@ -383,21 +335,10 @@
       "blue_box": {
         "label": "blue_box",
         "box": [
-          484.0,
+          100.0,
           280.0,
-          540.0,
+          156.0,
           344.0
-        ],
-        "measured": true,
-        "lost_frames": 0
-      },
-      "vial": {
-        "label": "vial",
-        "box": [
-          270.0,
-          280.0,
-          290.0,
-          300.0
         ],
         "measured": true,
         "lost_frames": 0
@@ -406,8 +347,8 @@
     "hands": [
       {
         "point": [
-          512.0,
-          312.0
+          320.0,
+          430.0
         ],
         "confidence": 0.95,
         "side": "right",
@@ -418,8 +359,7 @@
       "tray": "IDLE",
       "tray_lid": "IDLE",
       "red_box": "IDLE",
-      "blue_box": "RELEASED",
-      "vial": "IDLE"
+      "blue_box": "RELEASED"
     },
     "rack_ready": true,
     "fps": 15.0
@@ -435,10 +375,10 @@
       "tray": {
         "label": "tray",
         "box": [
-          230.0,
-          240.0,
-          410.0,
-          410.0
+          210.0,
+          238.0,
+          430.0,
+          418.0
         ],
         "measured": true,
         "lost_frames": 0
@@ -468,21 +408,10 @@
       "blue_box": {
         "label": "blue_box",
         "box": [
-          484.0,
+          100.0,
           280.0,
-          540.0,
+          156.0,
           344.0
-        ],
-        "measured": true,
-        "lost_frames": 0
-      },
-      "vial": {
-        "label": "vial",
-        "box": [
-          270.0,
-          280.0,
-          290.0,
-          300.0
         ],
         "measured": true,
         "lost_frames": 0
@@ -491,8 +420,8 @@
     "hands": [
       {
         "point": [
-          300.0,
-          350.0
+          320.0,
+          430.0
         ],
         "confidence": 0.95,
         "side": "right",
@@ -503,8 +432,7 @@
       "tray": "IDLE",
       "tray_lid": "IDLE",
       "red_box": "IDLE",
-      "blue_box": "IDLE",
-      "vial": "IDLE"
+      "blue_box": "IDLE"
     },
     "rack_ready": true,
     "fps": 15.0
@@ -520,10 +448,10 @@
       "tray": {
         "label": "tray",
         "box": [
-          230.0,
-          240.0,
-          410.0,
-          410.0
+          210.0,
+          238.0,
+          430.0,
+          418.0
         ],
         "measured": true,
         "lost_frames": 0
@@ -553,21 +481,10 @@
       "blue_box": {
         "label": "blue_box",
         "box": [
-          484.0,
+          100.0,
           280.0,
-          540.0,
+          156.0,
           344.0
-        ],
-        "measured": true,
-        "lost_frames": 0
-      },
-      "vial": {
-        "label": "vial",
-        "box": [
-          305.0,
-          105.0,
-          335.0,
-          145.0
         ],
         "measured": true,
         "lost_frames": 0
@@ -577,7 +494,7 @@
       {
         "point": [
           320.0,
-          125.0
+          430.0
         ],
         "confidence": 0.95,
         "side": "right",
@@ -588,8 +505,7 @@
       "tray": "IDLE",
       "tray_lid": "IDLE",
       "red_box": "IDLE",
-      "blue_box": "IDLE",
-      "vial": "RELEASED"
+      "blue_box": "IDLE"
     },
     "rack_ready": true,
     "fps": 15.0
@@ -605,10 +521,10 @@
       "tray": {
         "label": "tray",
         "box": [
-          230.0,
-          240.0,
-          410.0,
-          410.0
+          210.0,
+          238.0,
+          430.0,
+          418.0
         ],
         "measured": true,
         "lost_frames": 0
@@ -617,9 +533,9 @@
         "label": "tray_lid",
         "box": [
           230.0,
-          240.0,
+          60.0,
           410.0,
-          410.0
+          160.0
         ],
         "measured": true,
         "lost_frames": 0
@@ -638,43 +554,21 @@
       "blue_box": {
         "label": "blue_box",
         "box": [
-          484.0,
+          100.0,
           280.0,
-          540.0,
+          156.0,
           344.0
-        ],
-        "measured": true,
-        "lost_frames": 0
-      },
-      "vial": {
-        "label": "vial",
-        "box": [
-          305.0,
-          105.0,
-          335.0,
-          145.0
         ],
         "measured": true,
         "lost_frames": 0
       }
     },
-    "hands": [
-      {
-        "point": [
-          320.0,
-          300.0
-        ],
-        "confidence": 0.95,
-        "side": "right",
-        "person_id": 0
-      }
-    ],
+    "hands": [],
     "hoi": {
       "tray": "IDLE",
       "tray_lid": "IDLE",
       "red_box": "IDLE",
-      "blue_box": "IDLE",
-      "vial": "IDLE"
+      "blue_box": "IDLE"
     },
     "rack_ready": true,
     "fps": 15.0
@@ -690,10 +584,10 @@
       "tray": {
         "label": "tray",
         "box": [
-          230.0,
-          240.0,
-          410.0,
-          410.0
+          210.0,
+          238.0,
+          430.0,
+          418.0
         ],
         "measured": true,
         "lost_frames": 0
@@ -702,9 +596,9 @@
         "label": "tray_lid",
         "box": [
           230.0,
-          240.0,
+          60.0,
           410.0,
-          410.0
+          160.0
         ],
         "measured": true,
         "lost_frames": 0
@@ -723,43 +617,21 @@
       "blue_box": {
         "label": "blue_box",
         "box": [
-          484.0,
+          100.0,
           280.0,
-          540.0,
+          156.0,
           344.0
-        ],
-        "measured": true,
-        "lost_frames": 0
-      },
-      "vial": {
-        "label": "vial",
-        "box": [
-          305.0,
-          105.0,
-          335.0,
-          145.0
         ],
         "measured": true,
         "lost_frames": 0
       }
     },
-    "hands": [
-      {
-        "point": [
-          20.0,
-          20.0
-        ],
-        "confidence": 0.95,
-        "side": "right",
-        "person_id": 0
-      }
-    ],
+    "hands": [],
     "hoi": {
       "tray": "IDLE",
       "tray_lid": "IDLE",
       "red_box": "IDLE",
-      "blue_box": "IDLE",
-      "vial": "IDLE"
+      "blue_box": "IDLE"
     },
     "rack_ready": true,
     "fps": 15.0
