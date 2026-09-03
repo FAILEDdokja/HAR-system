@@ -406,6 +406,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--loop", action="store_true",
                         help="rewind a file source at EOF and re-validate each pass "
                         "(continuous demo replay; the event log stays append-only)")
+    parser.add_argument("--realtime", action="store_true",
+                        help="pace a file source at its own frame rate instead of as fast "
+                        "as the CPU allows (a watchable demo replay; no effect on a camera)")
+    parser.add_argument("--loop-pause", default=0.0, type=float, metavar="SECONDS",
+                        help="with --loop, hold the last frame this long before rewinding "
+                        "so the finished checklist stays readable (default: 0)")
     parser.add_argument("--contract", action="store_true",
                         help="print CONTRACT_VERSION and exit 0")
     # Composition-root extras (Track C owns the CLI surface, Appendix A):
@@ -657,6 +663,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     t0 = time.monotonic()
     exit_reason = "end of source"
     frame_limit = args.max_frames or (total_frames if args.stub else 0)
+    # --realtime: a file replays at its own fps instead of as fast as the CPU
+    # decodes it (the rendered demo otherwise flashes through all eight steps
+    # in ~2 s).  Pacing is wall-clock anchored per pass, so a slow frame is
+    # caught up rather than accumulated; a camera already runs in real time.
+    pace = bool(args.realtime) and capture is not None and not is_camera
+    pass_started = time.monotonic()
+    pass_frames = 0
     try:
         while True:
             if frame_limit and frame_count >= frame_limit:
@@ -673,13 +686,25 @@ def main(argv: Sequence[str] | None = None) -> int:
                     if args.loop and not args.stub:
                         # New pass over the same footage: rewind and start a
                         # fresh validation run (log stays append-only).
+                        if args.loop_pause > 0:
+                            # Hold the final frame so the completed checklist
+                            # (or the violation banner) stays on screen.
+                            time.sleep(args.loop_pause)
                         _rewind(capture)
                         perception.reset()
                         validator.reset()
                         pass_number += 1
+                        pass_started = time.monotonic()
+                        pass_frames = 0
                         print(f"--- pass {pass_number + 1}: source rewound, run reset ---")
                         continue
                     break
+                if pace:
+                    due = pass_started + pass_frames / nominal_fps
+                    delay = due - time.monotonic()
+                    if delay > 0:
+                        time.sleep(delay)
+                    pass_frames += 1
                 t_rel = time.monotonic() - t0 if is_camera else frame_count / nominal_fps
             else:
                 frame = None
