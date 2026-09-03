@@ -25,9 +25,22 @@ class ProtocolLoaderTests(unittest.TestCase):
         self.assertEqual("PTS-01", spec.protocol_id)
         self.assertEqual("Payload Tray Sorting & Sample Transfer", spec.title)
         self.assertEqual("1.0.0", spec.version)
-        self.assertEqual(8, len(spec.steps))
-        self.assertEqual(5, len(spec.zones))
-        self.assertEqual(5, len(spec.objects))
+        self.assertEqual(7, len(spec.steps))
+        self.assertEqual(4, len(spec.zones))
+        self.assertEqual(4, len(spec.objects))
+        # Live demo build: no vial / rack slot / sample transfer.
+        self.assertNotIn("vial", spec.objects)
+        self.assertIsNone(spec.zone("rack_slot"))
+        self.assertIsNone(spec.step("SAMPLE_TRANSFER"))
+        self.assertEqual(
+            ("tray", "tray_lid", "red_box", "blue_box"), spec.objects
+        )
+        # The final step follows straight on from VERIFY_BLUE_PLACED (the
+        # deleted vial step used to sit between them).
+        stow = spec.step("STOW_AND_CLOSE")
+        self.assertIsNotNone(stow)
+        self.assertEqual(7, stow.index)
+        self.assertEqual(("VERIFY_BLUE_PLACED",), stow.requires)
 
         # Check Zone coordinate resolution to 640x480
         # rack_roi: [0.08, 0.15, 0.92, 0.95] -> [51.2, 72.0, 588.8, 456.0]

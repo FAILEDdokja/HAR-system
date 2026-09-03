@@ -2,8 +2,10 @@
 
 A4 acceptance (plan §5): replaying ``tests/fixtures/evidence_correct.json``
 through ``SequenceValidator`` against ``protocols/pts01.yaml`` must produce
-exactly eight ``COMPLETED`` events in index order plus one
-``PROTOCOL_COMPLETE``, with zero violations.
+exactly seven ``COMPLETED`` events in index order plus one
+``PROTOCOL_COMPLETE``, with zero violations. (The live demo build drops the
+SAMPLE_TRANSFER/vial step; the fixture still contains the vial's physical
+motion, which the 7-step protocol simply does not score.)
 
 The violation-semantics tests below (rules 3 and 4) replay the other two A1
 fixtures.  Step A5 (plan §5) extends this file with the remaining done-when
@@ -61,7 +63,7 @@ def not_started_ui_status() -> UiStatus:
         current_step_id="PRESENT_TRAY",
         current_step_index=1,
         next_step_id="OPEN_TRAY",
-        next_instruction="Lift the tray lid clear of the tray slot.",
+        next_instruction="Slide the tray lid clear of the tray slot.",
         completed=(),
         skipped=(),
         violations=(),
@@ -155,17 +157,17 @@ def tray_frame(frame_index: int, *, present: bool = True, measured: bool = True)
 
 @unittest.skipIf(load_protocol is None, "PyYAML is not installed")
 class ValidatorCorrectRunTests(unittest.TestCase):
-    """A4 done-when: the correct run completes 8/8 with zero violations."""
+    """A4 done-when: the correct run completes 7/7 with zero violations."""
 
     @classmethod
     def setUpClass(cls):
         cls.frames = load_frames("evidence_correct.json")
         cls.validator, cls.events = replay(cls.frames)
 
-    def test_eight_completions_in_index_order(self):
+    def test_seven_completions_in_index_order(self):
         completed = events_of(self.events, "COMPLETED")
-        self.assertEqual(8, len(completed))
-        self.assertEqual([1, 2, 3, 4, 5, 6, 7, 8], [e.step_index for e in completed])
+        self.assertEqual(7, len(completed))
+        self.assertEqual([1, 2, 3, 4, 5, 6, 7], [e.step_index for e in completed])
         self.assertEqual(
             [
                 "PRESENT_TRAY",
@@ -174,7 +176,6 @@ class ValidatorCorrectRunTests(unittest.TestCase):
                 "VERIFY_RED_PLACED",
                 "EXTRACT_BLUE",
                 "VERIFY_BLUE_PLACED",
-                "SAMPLE_TRANSFER",
                 "STOW_AND_CLOSE",
             ],
             [e.step_id for e in completed],
@@ -186,7 +187,7 @@ class ValidatorCorrectRunTests(unittest.TestCase):
         self.assertEqual(1, len(complete))
         self.assertIs(self.events[-1], complete[0])
         self.assertEqual("STOW_AND_CLOSE", complete[0].step_id)
-        self.assertEqual(8, complete[0].step_index)
+        self.assertEqual(7, complete[0].step_index)
         self.assertEqual(
             "Protocol PTS-01 completed with no violations",
             complete[0].message,
@@ -200,7 +201,7 @@ class ValidatorCorrectRunTests(unittest.TestCase):
 
     def test_every_step_started_exactly_once(self):
         started = events_of(self.events, "STARTED")
-        self.assertEqual([1, 2, 3, 4, 5, 6, 7, 8], [e.step_index for e in started])
+        self.assertEqual([1, 2, 3, 4, 5, 6, 7], [e.step_index for e in started])
         self.assertIs(self.events[0], started[0])
         self.assertEqual("PRESENT_TRAY", started[0].step_id)
         self.assertEqual("IN_PROGRESS", started[0].status)
@@ -208,11 +209,11 @@ class ValidatorCorrectRunTests(unittest.TestCase):
     def test_finished_state_and_introspection(self):
         self.assertTrue(self.validator.finished)
         self.assertIsNone(self.validator.current)
-        self.assertEqual(8, len(self.validator.completed_steps))
+        self.assertEqual(7, len(self.validator.completed_steps))
         status = self.validator.status()
         self.assertEqual("COMPLETE", status.state)
         self.assertEqual("PTS-01", status.protocol_id)
-        self.assertEqual(8, status.current_step_index)
+        self.assertEqual(7, status.current_step_index)
         self.assertEqual("", status.next_step_id)
         self.assertEqual((), status.skipped)
         self.assertEqual((), status.violations)
@@ -269,7 +270,9 @@ class ValidatorViolationSemanticsTests(unittest.TestCase):
         self.assertEqual(1, len(events_of(events, "OUT_OF_ORDER")))
         self.assertEqual(1, len(events_of(events, "SKIPPED")))
         self.assertEqual(0, len(events_of(events, "TIMEOUT")))
-        # No protocol completion: the vial transfer never saw pickup evidence.
+        # No protocol completion: the operator withdraws both hands while the
+        # final hands_clear (STOW_AND_CLOSE) step is still pending, so it never
+        # accumulates its hold.
         self.assertEqual(0, len(events_of(events, "PROTOCOL_COMPLETE")))
         self.assertFalse(validator.finished)
         self.assertEqual(("EXTRACT_BLUE", "EXTRACT_RED"), validator.violations)
@@ -281,9 +284,9 @@ class ValidatorViolationSemanticsTests(unittest.TestCase):
         frames = load_frames("evidence_wrong_order.json")
         validator, events = replay(frames)
         violations_before = validator.violations
-        # The tail frame has both hands out of the envelope while the vial
-        # transfer is still pending: an extra OUT_OF_ORDER/SKIPPED here would
-        # be a false alarm.
+        # The tail frame has both hands out of the envelope while the final
+        # STOW_AND_CLOSE step is still pending: an extra OUT_OF_ORDER/SKIPPED
+        # here would be a false alarm.
         more = validator.update(frames[-1])
         self.assertEqual(0, len(more))
         self.assertEqual(violations_before, validator.violations)
@@ -500,7 +503,7 @@ class ValidatorUiStatusTests(unittest.TestCase):
                 protocol_title=PTS01_TITLE,
                 # At completion the checklist stays on the final step.
                 current_step_id="STOW_AND_CLOSE",
-                current_step_index=8,
+                current_step_index=7,
                 next_step_id="",
                 next_instruction="",
                 completed=(
@@ -510,7 +513,6 @@ class ValidatorUiStatusTests(unittest.TestCase):
                     "VERIFY_RED_PLACED",
                     "EXTRACT_BLUE",
                     "VERIFY_BLUE_PLACED",
-                    "SAMPLE_TRANSFER",
                     "STOW_AND_CLOSE",
                 ),
                 skipped=(),
@@ -540,20 +542,25 @@ class ValidatorUiStatusTests(unittest.TestCase):
             UiStatus(
                 protocol_id="PTS-01",
                 protocol_title=PTS01_TITLE,
-                # The cursor re-baselined onto EXTRACT_BLUE and ran on; by
-                # the fixture's end step 7 is current.
-                current_step_id="SAMPLE_TRANSFER",
+                # The cursor re-baselined onto EXTRACT_BLUE (red skipped), the
+                # remaining steps ran on, and the 7-step build completes on the
+                # final hands_clear (the vial transfer no longer gates it).
+                current_step_id="STOW_AND_CLOSE",
                 current_step_index=7,
-                next_step_id="STOW_AND_CLOSE",
-                next_instruction=(
-                    "Return the lid to the tray and withdraw both hands from the rack envelope."
+                next_step_id="",
+                next_instruction="",
+                completed=(
+                    "PRESENT_TRAY",
+                    "OPEN_TRAY",
+                    "EXTRACT_BLUE",
+                    "VERIFY_BLUE_PLACED",
+                    "STOW_AND_CLOSE",
                 ),
-                completed=("PRESENT_TRAY", "OPEN_TRAY", "EXTRACT_BLUE", "VERIFY_BLUE_PLACED"),
                 skipped=("EXTRACT_RED",),
                 # First-occurrence order: the OUT_OF_ORDER alert was noted
                 # on EXTRACT_BLUE before EXTRACT_RED was marked skipped.
                 violations=("EXTRACT_BLUE", "EXTRACT_RED"),
-                state="IN_PROGRESS",
+                state="COMPLETE",
                 t_rel=9.5,
                 fps=15.0,
                 last_alert=last_violation.message,
@@ -616,7 +623,7 @@ class ValidatorUiStatusTests(unittest.TestCase):
         )
         # Tuples become JSON-native lists; nothing else is transformed.
         self.assertIsInstance(payload["completed"], list)
-        self.assertEqual(8, len(payload["completed"]))
+        self.assertEqual(7, len(payload["completed"]))
         self.assertEqual("COMPLETE", payload["state"])
         self.assertEqual(CONTRACT_VERSION, payload["contract_version"])
         # to_dict rounds the floats exactly as the contract declares.
