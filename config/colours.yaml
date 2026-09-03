@@ -1,54 +1,74 @@
-# config/colours.yaml - HSV ranges for the five PTS-01 protocol objects.
+# config/colours.yaml - HSV ranges for PTS-01 protocol objects (live demo build).
 #
 # Owned by Person B (task B2). The venue lighting WILL differ from the tuning
 # room: retune here, never in code. Do this before the demo, from the live
 # camera, with the colour-key card in frame.
 #
-# SCALE: OpenCV HSV - H in [0, 180), S and V in [0, 255]. (GIMP reports
-# H in degrees; divide by 2.) Pick values with the props actually in frame.
+# SCALE: OpenCV HSV — H in [0, 180), S and V in [0, 255].
+#   (GIMP reports H in degrees; divide by 2 to get OpenCV H.)
+#   Pick values with ALL props simultaneously in frame under demo lights.
+#
+# PHYSICAL PROPS (locked for SIH26174 demo)
+#   tray      Black/dark-grey rectangular tray  ≈ #58554E  (grey-black, NOT pure black)
+#   tray_lid  Yellow/yellow-green paper lid      ≈ #CBC333  (dull yellow-green)
+#   red_box   Small matte red box                ≈ #E14938
+#   blue_box  Small matte CYAN box               ≈ #00BEDE  (cyan, NOT classic deep-blue)
+#   (No vial in this demo build.)
 #
 # FORMAT:
 #   detector:           options for har.perception.color_detector.ColorDetector
 #     median_window:    temporal smoothing window (frames) per label
 #     min_area:         blobs smaller than this many pixels are ignored
 #     roi:              [x1, y1, x2, y2] pixels, or null for the whole frame
-#   colours:            one entry per protocol object (labels are frozen by
-#                       protocols/pts01.yaml); each takes one or more inclusive
-#                       [lo, hi] HSV ranges. Multiple ranges are OR-ed together
-#                       (red wraps around H = 180).
+#   colours:            one entry per protocol object; each label takes one or
+#                       more inclusive [lo, hi] HSV ranges. Multiple ranges are
+#                       OR-ed (red wraps around H = 180, so needs two ranges).
 
 detector:
   median_window: 5
-  # Retuned against demo/*.mp4 (the committed stand-in footage): the rendered
-  # vial is a 20x20 px blob whose contour area (~361 px) is under the old 400.
-  # 300 keeps single-pixel speckle out while seeing every PTS-01 prop.
+  # 300 px² keeps single-pixel speckle out while still seeing small 30×30 px
+  # matte boxes on a white sheet. Lower to 200 if boxes read inconsistently
+  # at distance; raise to 400 if white-sheet reflections become false positives.
   min_area: 300
-  roi: null # e.g. [52, 72, 588, 456] once the rack position is fixed (B6)
+  roi: null  # e.g. [52, 72, 588, 456] once the rack position is fixed (B6)
 
 colours:
-  # Black tray: any hue, low value (dark), low-ish saturation so shadows on
-  # the white bench do not pass. Raise the V upper bound if the room is dark.
+  # Grey-black tray (≈ #58554E in hex).
+  # OpenCV HSV: H≈15 (very low chroma, so H barely matters), S≈12, V≈85.
+  # Strategy: any hue, low-to-mid saturation, mid Value so the dark rim is
+  # detected even if the room is reasonably bright. Upper V raised to 110
+  # (vs. old 75) because #58554E is not pure black — demo lights may wash it
+  # slightly brighter. Keep S upper bound low (≤60) so white-sheet soft
+  # shadows (S≈0) do not pass.
+  # Raise V upper bound further (e.g. 130) if tray appears mid-grey on camera.
   tray:
     ranges:
-      - [[0, 0, 0], [180, 255, 75]]
+      - [[0, 0, 20], [180, 60, 110]]
 
-  # Yellow lid.
+  # Yellow-green lid (≈ #CBC333 in hex).
+  # OpenCV HSV: H≈30 (yellow-green, not neon-yellow H≈25 nor pure green H≈60).
+  # S≈200, V≈195. Range widened toward green (H up to 42) and toward yellow
+  # (H down to 18) to handle colour-rendering variance under fluorescent vs.
+  # daylight. S lower bound 60 to exclude grey/white speckle.
   tray_lid:
     ranges:
-      - [[20, 80, 80], [35, 255, 255]]
+      - [[18, 60, 80], [42, 255, 255]]
 
-  # Red box: hue wraps, so it needs two ranges.
+  # Matte red box (≈ #E14938 in hex).
+  # OpenCV HSV: H≈3, S≈190, V≈220. Red wraps in HSV so two ranges needed.
+  # Lower saturation bound 80 (vs. old 100) handles matte surfaces that
+  # desaturate slightly. V lower bound 60 to survive cast shadows.
   red_box:
     ranges:
-      - [[0, 100, 80], [8, 255, 255]]
-      - [[172, 100, 80], [179, 255, 255]]
+      - [[0, 80, 60], [9, 255, 255]]
+      - [[170, 80, 60], [179, 255, 255]]
 
-  # Blue box.
+  # Matte CYAN box (≈ #00BEDE in hex).
+  # OpenCV HSV: H≈93, S≈255, V≈220.  This is CYAN — H is around 85-100,
+  # NOT the classic deep-blue range (H 100-125) that the old config used.
+  # Widened range [82, 105] catches cyan under warm vs. cool lighting shifts.
+  # S lower bound 80 to distinguish cyan from pale blue-grey surfaces.
+  # If under warm-yellow venue lights the cyan shifts greener, extend H lo to 75.
   blue_box:
     ranges:
-      - [[100, 90, 60], [125, 255, 255]]
-
-  # Green vial: wide green window - vials are small, keep it forgiving.
-  vial:
-    ranges:
-      - [[40, 60, 60], [85, 255, 255]]
+      - [[82, 80, 60], [105, 255, 255]]

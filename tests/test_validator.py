@@ -249,14 +249,14 @@ class ValidatorViolationSemanticsTests(unittest.TestCase):
         self.assertEqual("VIOLATION", skipped[0].status)
         # Message comes from the skipped step's voice_alert (pts01.yaml).
         self.assertEqual(
-            "Step 3 skipped. The red box must go to zone A before the blue box.",
+            "Step 3 skipped. The red box must go to the right pad before the blue box.",
             skipped[0].message,
         )
         out_of_order = events_of(events, "OUT_OF_ORDER")
         self.assertEqual(1, len(out_of_order))
         self.assertEqual("EXTRACT_BLUE", out_of_order[0].step_id)
         self.assertEqual(
-            "Out of sequence. The red box must be placed before the blue box.",
+            "Out of sequence. The red box must be placed on the right pad before the blue box.",
             out_of_order[0].message,
         )
         # The skip re-baselines the cursor onto the satisfied later step.
@@ -392,10 +392,10 @@ class ValidatorMeasuredFalseTests(unittest.TestCase):
     def test_coasting_track_never_triggers_a_skip_jump(self):
         # Second half of rule 7: a later step must not be *jumped to* on a
         # coasted box either.  Present a coasting red box already sitting in
-        # zone A (step 3's work, apparently done) while step 1 is unsatisfied.
+        # zone_red (step 3's work: camera-right pad) while step 1 is unsatisfied.
         validator = make_validator()
         red_in_zone_a = ObjectTrack(
-            label="red_box", box=(100.0, 250.0, 140.0, 290.0), measured=False
+            label="red_box", box=(500.0, 250.0, 540.0, 290.0), measured=False
         )
         events: list[StepEvent] = []
         for i in range(30):
@@ -482,7 +482,7 @@ class ValidatorUiStatusTests(unittest.TestCase):
                 next_step_id="EXTRACT_BLUE",
                 # next_instruction is the *next* step's instruction, verbatim
                 # from pts01.yaml — not its title and not its voice_prompt.
-                next_instruction="Pick the blue box out of the tray and place it in zone B.",
+                next_instruction="Pick the blue box out of the tray and place it on the left pad.",
                 completed=("PRESENT_TRAY", "OPEN_TRAY", "EXTRACT_RED"),
                 skipped=(),
                 violations=(),
@@ -569,7 +569,7 @@ class ValidatorUiStatusTests(unittest.TestCase):
             validator.status(),
         )
         self.assertEqual(
-            "Step 3 skipped. The red box must go to zone A before the blue box.",
+            "Step 3 skipped. The red box must go to the right pad before the blue box.",
             validator.status().last_alert,
         )
 
