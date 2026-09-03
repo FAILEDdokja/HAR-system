@@ -133,10 +133,66 @@ class PredicateTests(unittest.TestCase):
         self.assertFalse(transfer(ev(objects={"red": track("red", (100, 280, 156, 344)), "vial": track("vial", (200, 200, 220, 220))}, hoi={"vial": HandObjectState.PICKED_UP.value}), self.spec, s, no_source))
         self.assertFalse(transfer(ev(objects={"red": track("red", (100, 280, 156, 344)), "vial": track("vial", (305, 105, 335, 145))}, hoi={"vial": HandObjectState.RELEASED.value}), self.spec, s, no_source))
 
-    def test_hands_clear_positive_and_negative(self):
+    # -- hands_clear -------------------------------------------------------
+    #
+    # ``hands_clear`` must never be *vacuously* true.  ``all()`` over an empty
+    # ``ev.hands`` is True in Python, and that is exactly how the live build
+    # spoke step 7's alert ("hands ... inside the work envelope") while the
+    # run was still on step 1 / 2 with nobody in frame: the validator's
+    # later-step scan saw STOW_AND_CLOSE as already satisfied.
+
+    HAND_IN = Wrist((320.0, 240.0), 0.9, "right")     # inside `rack`
+    HAND_OUT = Wrist((700.0, 10.0), 0.9, "left")      # outside `rack`
+
+    def test_hands_clear_is_false_when_no_hand_was_ever_seen_in_zone(self):
         s = step("hands_clear(rack)", "", "rack")
-        self.assertTrue(hands_clear(ev(objects={}, hands=[Wrist((700.0, 10.0), 0.9, "left")]), self.spec, s, PredicateState()))
-        self.assertFalse(hands_clear(ev(objects={}, hands=[Wrist((320.0, 240.0), 0.9, "right")]), self.spec, s, PredicateState()))
+        st = PredicateState()
+        # Empty scene, repeatedly: absence of evidence is not "cleared".
+        for _ in range(25):
+            self.assertFalse(hands_clear(ev(objects={}, hands=[]), self.spec, s, st))
+        self.assertFalse(st.hands_seen_in_zone)
+        # A hand that is visible but has only ever been *outside* the zone is
+        # not a cleared envelope either.
+        self.assertFalse(hands_clear(ev(objects={}, hands=[self.HAND_OUT]), self.spec, s, st))
+        self.assertFalse(st.hands_seen_in_zone)
+
+    def test_hands_clear_is_false_while_a_wrist_is_inside_zone(self):
+        s = step("hands_clear(rack)", "", "rack")
+        st = PredicateState()
+        self.assertFalse(hands_clear(ev(objects={}, hands=[self.HAND_IN]), self.spec, s, st))
+        self.assertTrue(st.hands_seen_in_zone)
+        # One hand out, one still in: still not clear.
+        self.assertFalse(hands_clear(ev(objects={}, hands=[self.HAND_OUT, self.HAND_IN]), self.spec, s, st))
+
+    def test_hands_clear_becomes_true_only_after_hands_enter_then_leave(self):
+        s = step("hands_clear(rack)", "", "rack")
+        st = PredicateState()
+        self.assertFalse(hands_clear(ev(objects={}, hands=[self.HAND_IN]), self.spec, s, st))
+        # Hands leave the zone: both "visible outside" and "not visible at
+        # all" count as clear once the envelope was previously occupied.  The
+        # validator's hold_frames then supplies the required persistence.
+        for _ in range(20):
+            self.assertTrue(hands_clear(ev(objects={}, hands=[self.HAND_OUT]), self.spec, s, st))
+        for _ in range(20):
+            self.assertTrue(hands_clear(ev(objects={}, hands=[]), self.spec, s, st))
+        # Re-entering makes it false again; leaving again makes it true.
+        self.assertFalse(hands_clear(ev(objects={}, hands=[self.HAND_IN]), self.spec, s, st))
+        self.assertTrue(hands_clear(ev(objects={}, hands=[]), self.spec, s, st))
+
+    def test_hands_clear_state_does_not_leak_across_fresh_state(self):
+        # The validator hands every step (and every reset) a fresh
+        # PredicateState, so the latch must live there and start False.
+        s = step("hands_clear(rack)", "", "rack")
+        st = PredicateState()
+        hands_clear(ev(objects={}, hands=[self.HAND_IN]), self.spec, s, st)
+        self.assertTrue(hands_clear(ev(objects={}, hands=[]), self.spec, s, st))
+        self.assertFalse(hands_clear(ev(objects={}, hands=[]), self.spec, s, PredicateState()))
+
+    def test_hands_clear_unknown_zone_is_false(self):
+        s = step("hands_clear(nope)", "", "nope")
+        st = PredicateState()
+        self.assertFalse(hands_clear(ev(objects={}, hands=[]), self.spec, s, st))
+        self.assertFalse(hands_clear(ev(objects={}, hands=[self.HAND_IN]), self.spec, s, st))
 
 
 if __name__ == "__main__":
