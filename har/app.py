@@ -401,6 +401,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
                         help="pose inference image size (default: 480)")
     parser.add_argument("--conf", default=0.45, type=float, metavar="F",
                         help="pose detection confidence (default: 0.45)")
+    parser.add_argument("--wrist-kp-conf", default=0.5, type=float, metavar="F",
+                        help="minimum per-wrist keypoint (visibility) confidence to accept a "
+                        "hand (default: 0.5; raise to kill occluded/hallucinated hands)")
+    parser.add_argument("--wrist-confirm", default=3, type=int, metavar="N",
+                        help="report a hand only after it is seen on N consecutive pose frames "
+                        "(default: 3; filters single-frame false positives)")
+    parser.add_argument("--wrist-forget", default=5, type=int, metavar="N",
+                        help="keep a confirmed hand for N missing pose frames before dropping it "
+                        "(default: 5; guards against 1-frame detector dropout)")
     parser.add_argument("--max-frames", default=0, type=int, metavar="N",
                         help="stop after N frames (0 = no limit)")
     parser.add_argument("--loop", action="store_true",
@@ -507,6 +516,9 @@ def _build_wrists(args: argparse.Namespace, is_camera: bool):
                 conf=args.conf,
                 every_n_frames=args.pose_every_n,
                 model=_ImgszModel(WristExtractor._load_model(args.weights), args.imgsz),
+                keypoint_confidence=args.wrist_kp_conf,
+                confirm_frames=args.wrist_confirm,
+                forget_frames=args.wrist_forget,
             ), choice
         except Exception as exc:
             print(
@@ -520,7 +532,8 @@ def _build_wrists(args: argparse.Namespace, is_camera: bool):
     return NullWrists(), choice
 
 
-def _start_web_server(streamer, status_provider, log_tail, spec, host: str, port: int):
+def _start_web_server(streamer, status_provider, log_tail, spec, host: str, port: int,
+                      reset_handler=None):
     """Start the C9 GUI in a daemon thread.  Returns (server, url) or (None, reason)."""
     try:
         from werkzeug.serving import make_server
@@ -529,6 +542,8 @@ def _start_web_server(streamer, status_provider, log_tail, spec, host: str, port
     except ImportError as exc:
         return None, f"GUI unavailable ({exc}); continuing without it"
     web.bind_protocol(spec)
+    if reset_handler is not None:
+        web.bind_reset(reset_handler)
     app = web.create_app(streamer, status_provider, log_tail)
     try:
         server = make_server(host, port, app, threaded=True)
@@ -617,6 +632,46 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"  t={event.t_rel:7.3f}  f={event.frame_index:5d}  {event.event:17s} "
               f"{event.status:11s} {event.step_id}  {event.message}")
 
+    # ---- manual reset (GUI "Restart" button) -----------------------
+    # The GUI lives in a Flask daemon thread; the validator and perception
+    # stacks are owned by the main frame loop.  So the GUI handler only sets a
+    # thread-safe flag; the frame loop performs the actual reset between frames
+    # (no cross-thread mutation of validator/perception state), then logs it.
+    reset_event = threading.Event()
+
+    def request_manual_reset() -> dict:
+        reset_event.set()
+        return {"ok": True, "message": "reset requested"}
+
+    def _manual_reset(reason: str) -> None:
+        """Reset the run back to step 1 (idle) without touching camera/models.
+
+        Clears the sequence validator (cursor, completed/skipped/violations,
+        alert, per-step runtimes and the fresh-start timestamp so the new
+        step-1 entered_at / 60 s timeout restarts), clears the perception
+        stacks (trackers, interaction FSMs, wrist cache/debounce), and
+        re-anchors the elapsed clock.  The event log stays append-only and the
+        manual reset is itself logged with a wall-clock timestamp.
+        """
+        nonlocal t0
+        elapsed = time.monotonic() - t0
+        if not args.stub:
+            validator.reset()
+            perception.reset()
+        t0 = time.monotonic()  # restart the elapsed / inactivity baseline
+        log_reset = StepEvent(
+            t_iso=_now_iso(),
+            t_rel=elapsed,
+            frame_index=frame_count,
+            step_id="",
+            step_index=0,
+            event="MANUAL_RESET",
+            status="INFO",
+            message=f"Manual restart requested ({reason}); sequence reset to step 1",
+            confidence=1.0,
+        )
+        handle_event(log_reset)
+
     recorder = None
     recording_path = None
     if args.record:
@@ -636,7 +691,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     want_server = (not args.headless) or args.stream_host is not None or args.stream_port is not None
     if want_server:
         server, note = _start_web_server(streamer, validator.status, ring.tail, spec,
-                                         stream_host, stream_port)
+                                         stream_host, stream_port,
+                                         reset_handler=request_manual_reset)
         server_note = note
 
     voice_note = "off (--no-voice)"
@@ -672,6 +728,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     pass_frames = 0
     try:
         while True:
+            # Consume any GUI "Restart" request between frames: reset the run
+            # back to step 1 (no app/camera/model restart) and reprocess the
+            # next frame with fresh state.
+            if reset_event.is_set():
+                reset_event.clear()
+                _manual_reset("GUI Restart button")
+                continue
             if frame_limit and frame_count >= frame_limit:
                 exit_reason = (f"--max-frames {args.max_frames}" if args.max_frames
                                else "stub fixture replayed")

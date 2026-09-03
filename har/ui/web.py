@@ -31,12 +31,15 @@ from typing import Any, Callable, Iterator
 
 from har.contracts import StepEvent, UiStatus
 
-__all__ = ["create_app", "bind_protocol"]
+__all__ = ["create_app", "bind_protocol", "bind_reset"]
 
 _INDEX = Path(__file__).with_name("index.html")
 
 _protocol_lock = threading.Lock()
 _protocol_spec: Any = None
+
+_reset_lock = threading.Lock()
+_reset_handler: Any = None
 
 
 def bind_protocol(spec: Any) -> None:
@@ -53,6 +56,24 @@ def bind_protocol(spec: Any) -> None:
 def _bound_protocol() -> Any:
     with _protocol_lock:
         return _protocol_spec
+
+
+def bind_reset(handler: Any) -> None:
+    """Register the callable that a ``POST /reset`` invokes (manual restart).
+
+    Additive hook used exactly like ``bind_protocol`` so the frozen
+    ``create_app`` signature stays unchanged.  ``handler()`` must be safe to
+    call from the GUI thread (typically it only flags the main loop) and
+    should return a dict (merged into the ``/reset`` JSON response).
+    """
+    global _reset_handler
+    with _reset_lock:
+        _reset_handler = handler
+
+
+def _bound_reset() -> Any:
+    with _reset_lock:
+        return _reset_handler
 
 
 def _as_dict(status: Any) -> dict:
@@ -112,5 +133,27 @@ def create_app(
         if spec is None:
             return jsonify({"error": "no protocol bound"}), 404
         return jsonify(spec.to_dict())
+
+    @app.post("/reset")
+    def reset():  # noqa: ANN202 - flask route
+        """Manual restart: reset the experiment sequence back to step 1.
+
+        The handler is bound by the composition root via :func:`bind_reset`.
+        It does *not* restart the app, camera or models — the composition root
+        only flags the frame loop, which resets the sequence between frames.
+        """
+        handler = _bound_reset()
+        if handler is None:
+            return jsonify({"ok": False, "error": "no reset handler bound"}), 503
+        try:
+            result = handler() or {}
+        except Exception as exc:  # noqa: BLE001 - surface as a clean 500
+            return jsonify({"ok": False, "error": str(exc)}), 500
+        if isinstance(result, dict):
+            body = dict(result)
+        else:
+            body = {"ok": True, "detail": str(result)}
+        body.setdefault("ok", True)
+        return jsonify(body)
 
     return app
