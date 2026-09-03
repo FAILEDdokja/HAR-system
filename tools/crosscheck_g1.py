@@ -3,7 +3,8 @@
 
 Plan step B5 ("done when"): B4's ``PerceptionStack`` output on synthetic
 protocol footage is accepted by A4's ``SequenceValidator`` with no contract
-errors and produces 8 ``COMPLETED``.  Person C's
+errors and produces 7 ``COMPLETED`` (the live demo build drops the
+SAMPLE_TRANSFER/vial step).  Person C's
 ``tools/make_synthetic_video.py`` (C4) never landed, so the committed
 ``demo/*.mp4`` files — Person A's scripted stand-ins, rendered in exactly the
 layout the colour detector is designed for — serve as the synthetic footage.
@@ -22,7 +23,7 @@ unchanged.
 Pass criteria per run (from ``demo/ground_truth.json`` — the committed
 expected logs, which encode the validator's one-shot violation design):
 
-* ``correct``      8 COMPLETED in index order + PROTOCOL_COMPLETE, 0 violations
+* ``correct``      7 COMPLETED in index order + PROTOCOL_COMPLETE, 0 violations
 * ``skip``         exactly one OUT_OF_ORDER (EXTRACT_BLUE), no completion
 * ``wrong_order``  exactly one OUT_OF_ORDER (EXTRACT_BLUE), no completion
 
@@ -53,7 +54,9 @@ from har.protocol.validator import SequenceValidator  # noqa: E402
 
 FRAME_SIZE = (640, 480)
 FPS = 15.0
-LABELS = ("tray", "tray_lid", "red_box", "blue_box", "vial")
+# Live demo build: the vial/SAMPLE_TRANSFER step is not part of the scored
+# protocol, so the perception stack tracks the four scored props only.
+LABELS = ("tray", "tray_lid", "red_box", "blue_box")
 
 #: rack_roi of protocols/pts01.yaml at 640x480 — the demo footage's rack
 #: position.  A venue/runtime setting, deliberately not in the shared yaml.
@@ -162,13 +165,13 @@ def main(argv=None) -> int:
                 print(f"  t={e.t_rel:7.3f}  f={e.frame_index:4d}  {e.event:17s} {e.status:11s} {e.step_id}")
 
         if run_id == "correct":
-            ok = len(completed) == 8 and complete and not violations
+            ok = len(completed) == 7 and complete and not violations
             detail = f"{len(completed)} COMPLETED, complete={complete}, violations={violations}"
         else:
             ok = (
                 violations == [("OUT_OF_ORDER", "EXTRACT_BLUE")]
                 and not complete
-                and len(completed) < 8
+                and len(completed) < 7
             )
             detail = f"violations={violations}, complete={complete}"
         ok_all &= ok

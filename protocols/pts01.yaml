@@ -1,8 +1,9 @@
 # PTS-01 - Payload Tray Sorting & Sample Transfer
 #
-# Locked 8-step procedure for SIH26174. Reconstruction of the (publicly
-# truncated) ISRO sample: "You are given a box that contains two smaller boxes
-# of color red and [blue] ...".
+# Live demo build: 7-step procedure for SIH26174 (the SAMPLE_TRANSFER / vial
+# step is omitted for the live prop demo — no vial is used). Reconstruction
+# of the (publicly truncated) ISRO sample: "You are given a box that contains
+# two smaller boxes of color red and [blue] ...".
 #
 # CONVENTIONS
 #   * All boxes below are NORMALISED fractions of frame width/height, i.e.
@@ -24,15 +25,11 @@
 #   wall-clock, dependent).  Tuned with `tools/tune_thresholds.py` against the
 #   recorded evidence (the A1 fixtures, and the densified/dropout stress sweep
 #   that emulates A8's real footage):
-#     * Action steps (hoi_cycle / transfer) raised from hold_frames=1 to 4 so a
-#       one-frame detector dropout on the *current* object + a one-frame spurious
-#       read on a *later* object cannot false-trigger OUT_OF_ORDER/SKIPPED. 4
-#       frames (~0.27 s) still completes on real footage (the released object is
-#       held in its zone) and stays within the recorded evidence's satisfied
-#       span.  Re-checked 2026-09-02 against the A8 recording
-#       (demo/correct_evidence.json): 8/8 COMPLETED, zero violations
-#       (tools/tune_thresholds.py --evidence demo/correct_evidence.json), and
-#       the --stress sweep stays 8/8 & violation-free for dropout p <= 0.2.
+#     * Action steps (hoi_cycle) use hold_frames=4 so a one-frame detector
+#       dropout on the *current* object + a one-frame spurious read on a *later*
+#       object cannot false-trigger OUT_OF_ORDER/SKIPPED. 4 frames (~0.27 s)
+#       still completes on real footage (the released object is held in its
+#       zone) and stays within the recorded evidence's satisfied span.
 #     * Dwell steps (object_stable / settled / hands_clear) keep generous holds
 #       (15-30 frames = 1-2 s) that survive the colour detector's burst dropouts
 #       under median-of-N smoothing (config/colours.yaml, B2).
@@ -44,7 +41,7 @@
 #   object_left_zone(label, zone)     present and centre outside zone
 #   hoi_cycle(label, zone)            NEAR -> PICKED_UP -> CARRYING -> RELEASED, release inside zone
 #   settled(label, zone)              centre inside zone and stationary for hold_frames
-#   transfer(src, dst, zone)          picked from src, released inside zone
+#   transfer(src, dst, zone)          picked from src, released inside zone (unused in this 7-step build)
 #   hands_clear(zone)                 no wrist inside zone for hold_frames
 
 protocol_id: PTS-01
@@ -56,7 +53,6 @@ objects:
   - tray_lid
   - red_box
   - blue_box
-  - vial
 
 zones:
   - id: rack_roi
@@ -71,9 +67,6 @@ zones:
   - id: zone_b
     label: Placement zone B (blue)
     box: [0.70, 0.50, 0.90, 0.80]
-  - id: rack_slot
-    label: Sample rack slot
-    box: [0.44, 0.18, 0.56, 0.34]
 
 steps:
   - step_id: PRESENT_TRAY
@@ -90,14 +83,14 @@ steps:
   - step_id: OPEN_TRAY
     index: 2
     title: Open the tray
-    instruction: Lift the tray lid clear of the tray slot.
+    instruction: Slide the tray lid clear of the tray slot.
     predicate: object_left_zone(tray_lid, tray_slot)
     target: tray_lid
     zone: tray_slot
     requires: [PRESENT_TRAY]
     hold_frames: 8
     timeout_s: 60
-    voice_prompt: Step 2. Lift the tray lid clear of the tray.
+    voice_prompt: Step 2. Slide the tray lid clear of the tray.
 
   - step_id: EXTRACT_RED
     index: 3
@@ -149,27 +142,15 @@ steps:
     timeout_s: 30
     voice_prompt: Step 6. Confirm the blue box is seated in zone B.
 
-  - step_id: SAMPLE_TRANSFER
-    index: 7
-    title: Transfer the sample vial
-    instruction: Take the vial from the red box and insert it into the rack slot.
-    predicate: transfer(red_box, vial, rack_slot)
-    target: vial
-    zone: rack_slot
-    requires: [VERIFY_BLUE_PLACED]
-    hold_frames: 4
-    timeout_s: 90
-    voice_prompt: Step 7. Transfer the sample vial to the rack slot.
-
   - step_id: STOW_AND_CLOSE
-    index: 8
+    index: 7
     title: Stow the lid and clear the envelope
     instruction: Return the lid to the tray and withdraw both hands from the rack envelope.
     predicate: hands_clear(rack_roi)
     target: tray_lid
     zone: rack_roi
-    requires: [SAMPLE_TRANSFER]
+    requires: [VERIFY_BLUE_PLACED]
     hold_frames: 20
     timeout_s: 60
-    voice_prompt: Step 8. Replace the lid and clear the work envelope.
+    voice_prompt: Step 7. Replace the lid and clear the work envelope.
     voice_alert: Hands are still inside the work envelope.

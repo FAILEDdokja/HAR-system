@@ -44,10 +44,10 @@ class ProtocolConfigTests(unittest.TestCase):
         cls.objects = set(cls.doc["objects"])
         cls.zones = {z["id"] for z in cls.doc["zones"]}
 
-    def test_protocol_is_pts01_with_eight_ordered_steps(self):
+    def test_protocol_is_pts01_with_seven_ordered_steps(self):
         self.assertEqual("PTS-01", self.doc["protocol_id"])
-        self.assertEqual(8, len(self.steps))
-        self.assertEqual(list(range(1, 9)), [s["index"] for s in self.steps])
+        self.assertEqual(7, len(self.steps))
+        self.assertEqual(list(range(1, 8)), [s["index"] for s in self.steps])
 
     def test_step_ids_are_unique(self):
         ids = [s["step_id"] for s in self.steps]
