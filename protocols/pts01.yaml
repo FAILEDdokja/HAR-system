@@ -70,7 +70,9 @@
 #   hoi_cycle(label, zone)            NEAR -> PICKED_UP -> CARRYING -> RELEASED, release inside zone
 #   settled(label, zone)              centre inside zone and stationary for hold_frames
 #   transfer(src, dst, zone)          picked from src, released inside zone (unused in this 7-step build)
-#   hands_clear(zone)                 no wrist inside zone for hold_frames
+#   hands_clear(zone)                 wrists were seen inside zone earlier this run and
+#                                     none is inside now, for hold_frames (an empty
+#                                     scene with no hands ever seen is NOT clear)
 
 protocol_id: PTS-01
 title: Payload Tray Sorting & Sample Transfer
@@ -200,4 +202,10 @@ steps:
     hold_frames: 20
     timeout_s: 60
     voice_prompt: Step 7. Clear both hands from the work envelope.
-    voice_alert: Hands are still inside the work envelope.
+    # voice_alert is what the validator speaks when this step is satisfied
+    # *early* (OUT_OF_ORDER while an earlier step is still current), so it
+    # must describe that situation.  It is never a "hands still inside"
+    # message: while step 7 is current and hands are still in the envelope
+    # the predicate is simply unsatisfied (voice_prompt keeps instructing;
+    # the 60 s timeout_s produces its own "Step 7 timed out" alert).
+    voice_alert: "Out of sequence: work envelope was cleared before earlier steps finished."

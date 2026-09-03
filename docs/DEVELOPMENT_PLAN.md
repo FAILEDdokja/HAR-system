@@ -731,6 +731,8 @@ class PredicateState:                     # per-step mutable counters, owned by 
     satisfied_frames: int = 0
     hoi_seen: set[str] = field(default_factory=set)
     last_box: BBox | None = None
+    initial_box: BBox | None = None
+    hands_seen_in_zone: bool = False      # hands_clear latch: never vacuously true on an empty scene
 
 # validator.py  (A4, A7)
 class SequenceValidator:
