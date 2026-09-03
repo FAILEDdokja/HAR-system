@@ -97,6 +97,59 @@ class FakeModel:
         return [self._results[min(self.calls - 1, len(self._results) - 1)]]
 
 
+def empty_result():
+    """A frame with nobody detected: empty boxes and empty keypoints."""
+    return FakeResult(boxes=FakeBoxes([]), keypoints=FakeKeypoints([], []))
+
+
+class WristDebounceTests(unittest.TestCase):
+    """Issue 1: a 1-frame (or short-lived) hallucinated hand must not report."""
+
+    def test_single_frame_flash_is_not_reported(self):
+        # One pose frame with wrists, then nothing.  confirm_frames=3 so the
+        # brief appearance never reaches the threshold -> no "hand" exposed.
+        model = FakeModel([person_result((1.0, 1.0), (2.0, 2.0)),
+                           empty_result(), empty_result(), empty_result()])
+        extractor = WristExtractor("unused.pt", model=model, confirm_frames=3)
+        for idx in range(4):
+            self.assertEqual([], extractor.wrists("frame", idx),
+                             f"frame {idx}: a single-frame flash must not report a hand")
+
+    def test_sustained_hand_is_reported_only_after_confirm_frames(self):
+        # Five consecutive pose frames with a real hand -> exposed from frame 2
+        # (0-based) onward, then dropped once absent for more than forget_frames.
+        person = person_result((100.0, 110.0), (200.0, 210.0))
+        model = FakeModel([person, person, person, person, person,
+                           empty_result(), empty_result(), empty_result(),
+                           empty_result(), empty_result()])
+        extractor = WristExtractor("unused.pt", model=model,
+                                   confirm_frames=3, forget_frames=3)
+        # confirmed from frame 2 (0-based), held through forget_frames=3 of
+        # missing pose frames (frames 5-7), dropped once absent >3 (frame 8).
+        expected_sides = [None, None, {"left", "right"}, {"left", "right"},
+                          {"left", "right"}, {"left", "right"}, {"left", "right"},
+                          {"left", "right"}, None, None]
+        for idx, sides in enumerate(expected_sides):
+            got = {w.side for w in extractor.wrists("frame", idx)}
+            if sides is None:
+                self.assertEqual(set(), got, f"frame {idx}: expected no hand")
+            else:
+                self.assertEqual(sides, got, f"frame {idx}: confirmed hand missing")
+
+    def test_debounce_resets_with_the_extractor(self):
+        # After reset the confirm counter restarts from scratch: the hand needs
+        # confirm_frames=2 fresh pose frames again before it is exposed.
+        model = FakeModel([person_result((1.0, 1.0), (2.0, 2.0))] * 6)
+        extractor = WristExtractor("unused.pt", model=model, confirm_frames=2)
+        self.assertEqual([], extractor.wrists("frame", 0))    # seen=1
+        self.assertEqual({"left", "right"},
+                         {w.side for w in extractor.wrists("frame", 1)})  # seen=2
+        extractor.reset()
+        self.assertEqual([], extractor.wrists("frame", 2))    # counter cleared
+        self.assertEqual({"left", "right"},
+                         {w.side for w in extractor.wrists("frame", 3)})  # seen=2 again
+
+
 class WristExtractionTests(unittest.TestCase):
     def test_both_wrists_are_extracted_with_sides_and_confidence(self):
         model = FakeModel([person_result((100.0, 110.0), (200.0, 210.0))])

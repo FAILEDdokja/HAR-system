@@ -34,6 +34,16 @@
   .badge.violation   { color: #fff; background: var(--bad); border-color: var(--bad); }
   .stat { color: var(--muted); font-size: 13px; }
   .stat b { color: var(--text); font-variant-numeric: tabular-nums; }
+  header .spacer { flex: 1 1 auto; }
+  .btn {
+    appearance: none; border: 1px solid var(--line); background: var(--panel2);
+    color: var(--text); font: 600 13px/1 inherit; padding: 8px 16px;
+    border-radius: 8px; cursor: pointer; letter-spacing: .3px;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .btn-reset { border-color: var(--bad); color: #ffd7d7; }
+  .btn-reset:hover { background: var(--bad); color: #fff; border-color: var(--bad); }
   main {
     display: grid; grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
     gap: 14px; padding: 14px 20px 20px;
@@ -98,6 +108,11 @@
   <span class="stat">elapsed <b id="trel">0.0 s</b></span>
   <span class="stat">fps <b id="fps">–</b></span>
   <span class="stat">contract <b id="contract">–</b></span>
+  <span class="spacer"></span>
+  <button id="btn-reset" class="btn btn-reset" type="button"
+          title="Reset the experiment sequence back to step 1 (idle) without restarting the app, camera or models. Clears current step, violations and timers.">
+    ⟳ Restart / Reset
+  </button>
 </header>
 
 <main>
@@ -230,6 +245,27 @@ async function pollStatus() {
   } catch (err) { /* stream starting up; try again next tick */ }
 }
 
+async function doReset() {
+  const btn = $("btn-reset");
+  btn.disabled = true;
+  btn.textContent = "Restarting…";
+  try {
+    const r = await fetch("/reset", {method: "POST", cache: "no-store"});
+    if (!r.ok) throw new Error("/reset -> " + r.status);
+    await r.json();
+    // The main loop applies the reset between frames; the next /status poll
+    // will show the run back at step 1 (NOT_STARTED / idle).  Log the action
+    // straight into the event log tail so there is immediate feedback.
+    pollEvents();
+  } catch (err) {
+    console.error("reset failed", err);
+    alert("Restart failed: " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "⟳ Restart / Reset";
+  }
+}
+
 async function pollEvents() {
   try {
     const events = await fetchJSON("/events?n=30");
@@ -249,6 +285,7 @@ async function pollEvents() {
   try { protocol = await fetchJSON("/protocol"); } catch (err) { protocol = null; }
   if (protocol) $("proto-sub").textContent =
     "SIH26174 · " + protocol.protocol_id + " v" + protocol.version + " · offline";
+  $("btn-reset").addEventListener("click", doReset);
   pollStatus(); pollEvents();
   setInterval(pollStatus, 500);   // 2 Hz
   setInterval(pollEvents, 1000);  // 1 Hz
