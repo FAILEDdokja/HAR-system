@@ -8,7 +8,11 @@ pre-defined experiment the astronaut is on, announces the next step, speaks up w
 is skipped or performed out of sequence, and leaves a timestamped log plus a stored and
 streamed video — with no ground station in the loop.
 
-**Protocol implemented:** `PTS-01 — Payload Tray Sorting & Sample Transfer`, 8 steps.
+**Protocol implemented:** `PTS-01 — Payload Tray Sorting & Sample Transfer`.
+The live prop-demo build is a **7-step** procedure (`protocols/pts01.yaml`): present tray →
+open tray → extract red box → verify red → extract blue box → verify blue → stow lid & clear
+the envelope. The sample-vial transfer step (`SAMPLE_TRANSFER`, the 8th recorded step) is
+omitted from the live demo; the full 8-step footage/annotation remains under `demo/`.
 
 ---
 
