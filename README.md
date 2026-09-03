@@ -76,7 +76,7 @@ cat runs/g1_wrong/events.csv
     --stream-host 0.0.0.0 --stream-port 8080
 ```
 
-Useful flags: `--headless` · `--no-voice` · `--max-frames N` · `--loop` ·
+Useful flags: `--headless` · `--no-voice` · `--max-frames N` · `--loop` · `--realtime` · `--loop-pause S` ·
 `--detector color|yolo` · `--wrists auto|pose|hsv|none` (`auto`: pose for a live
 camera, `hsv` for the shipped *rendered* footage; pass `--wrists pose` for real
 recordings) · `--pose-every-n N` · `--imgsz N` · `--conf F` · `--contract`.
