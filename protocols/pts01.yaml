@@ -1,9 +1,37 @@
-# PTS-01 - Payload Tray Sorting & Sample Transfer
+# PTS-01 - Payload Tray Sorting
 #
-# Live demo build: 7-step procedure for SIH26174 (the SAMPLE_TRANSFER / vial
-# step is omitted for the live prop demo — no vial is used). Reconstruction
-# of the (publicly truncated) ISRO sample: "You are given a box that contains
-# two smaller boxes of color red and [blue] ...".
+# Live demo build: 7-step procedure for SIH26174.  No vial, no rack_slot,
+# no SAMPLE_TRANSFER step.  Props are the only physical objects scored.
+#
+# ╔══════════════════════════════════════════════════════════════════════╗
+# ║  LIVE DEMO SPATIAL CONTRACT  (image / camera coordinates)           ║
+# ║                                                                      ║
+# ║  Camera: fixed top-down (or slight down-angle). Do NOT move after   ║
+# ║  zone calibration.  All zone boxes are in IMAGE coordinates, i.e.   ║
+# ║  LEFT in the image = camera-left, RIGHT in image = camera-right.    ║
+# ║  Operator "left"/"right" may differ — always use image coords here. ║
+# ║                                                                      ║
+# ║  Physical layout (as seen in the camera image):                     ║
+# ║                                                                      ║
+# ║   [ zone_blue / BLUE place-pad ]  [ TRAY ]  [ zone_red / RED pad ] ║
+# ║      camera-LEFT                  CENTER      camera-RIGHT           ║
+# ║                                                                      ║
+# ║  Start state: tray_lid resting ON the tray with a visible dark rim  ║
+# ║  of the tray showing around the lid edge — required for step 1      ║
+# ║  (tray detection needs the dark rim, not just the yellow lid).      ║
+# ║                                                                      ║
+# ║  OPEN_TRAY: slide the lid horizontally clear of tray_slot; pause    ║
+# ║  ~1 s IN FRAME outside the tray_slot footprint before releasing,    ║
+# ║  so hold_frames=8 completes before the lid leaves frame.            ║
+# ║                                                                      ║
+# ║  Canonical extraction order (correct run):                          ║
+# ║    1. Slide lid off tray.                                            ║
+# ║    2. Pick red_box → place on RIGHT pad (zone_red).                 ║
+# ║    3. Pick blue_box → place on LEFT pad (zone_blue).                ║
+# ║                                                                      ║
+# ║  Wrong-order demo: after lid open, complete BLUE placement before   ║
+# ║  RED — validator emits OUT_OF_ORDER then SKIPPED.                   ║
+# ╚══════════════════════════════════════════════════════════════════════╝
 #
 # CONVENTIONS
 #   * All boxes below are NORMALISED fractions of frame width/height, i.e.
@@ -56,17 +84,31 @@ objects:
 
 zones:
   - id: rack_roi
-    label: Payload rack work envelope
+    label: Payload rack work envelope (most of the white sheet)
     box: [0.08, 0.15, 0.92, 0.95]
+
   - id: tray_slot
+    # Tight footprint around the tray's rest position.
+    # Start state: lid ON tray with dark rim visible → tray detection fires.
+    # OPEN_TRAY requires lid centre to leave this box (slide horizontally).
     label: Tray stow position
     box: [0.34, 0.48, 0.66, 0.88]
-  - id: zone_a
-    label: Placement zone A (red)
-    box: [0.10, 0.50, 0.30, 0.80]
-  - id: zone_b
-    label: Placement zone B (blue)
+
+  - id: zone_red
+    # *** camera-RIGHT placement pad — red_box final home ***
+    # x ∈ [0.70, 0.90]: right half of a typical top-down frame.
+    # Must NOT overlap tray_slot (x starts at 0.70 > tray_slot x2 0.66).
+    # Calibrate so the centre of the placed red_box falls well inside.
+    label: Red box placement pad (camera-right)
     box: [0.70, 0.50, 0.90, 0.80]
+
+  - id: zone_blue
+    # *** camera-LEFT placement pad — blue_box final home ***
+    # x ∈ [0.10, 0.30]: left half of a typical top-down frame.
+    # Must NOT overlap tray_slot (x ends at 0.30 < tray_slot x1 0.34).
+    # Calibrate so the centre of the placed blue_box falls well inside.
+    label: Blue box placement pad (camera-left)
+    box: [0.10, 0.50, 0.30, 0.80]
 
 steps:
   - step_id: PRESENT_TRAY
@@ -83,6 +125,9 @@ steps:
   - step_id: OPEN_TRAY
     index: 2
     title: Open the tray
+    # Slide — do NOT lift — the lid horizontally until its centre leaves
+    # tray_slot.  Keep the lid in frame for ~1 s (hold_frames=8 at 15 fps)
+    # before releasing so the predicate completes while the lid is visible.
     instruction: Slide the tray lid clear of the tray slot.
     predicate: object_left_zone(tray_lid, tray_slot)
     target: tray_lid
@@ -95,62 +140,64 @@ steps:
   - step_id: EXTRACT_RED
     index: 3
     title: Extract the red box
-    instruction: Pick the red box out of the tray and place it in zone A.
-    predicate: hoi_cycle(red_box, zone_a)
+    # Place red_box on the RIGHT pad (zone_red, camera-right of tray).
+    instruction: Pick the red box out of the tray and place it on the right pad.
+    predicate: hoi_cycle(red_box, zone_red)
     target: red_box
-    zone: zone_a
+    zone: zone_red
     requires: [OPEN_TRAY]
     hold_frames: 4
     timeout_s: 90
-    voice_prompt: Step 3. Move the red box to zone A.
-    voice_alert: Step 3 skipped. The red box must go to zone A before the blue box.
+    voice_prompt: Step 3. Move the red box to the right pad.
+    voice_alert: Step 3 skipped. The red box must go to the right pad before the blue box.
 
   - step_id: VERIFY_RED_PLACED
     index: 4
     title: Verify red box placement
-    instruction: Confirm the red box is stationary inside zone A.
-    predicate: settled(red_box, zone_a)
+    instruction: Confirm the red box is stationary inside the right pad.
+    predicate: settled(red_box, zone_red)
     target: red_box
-    zone: zone_a
+    zone: zone_red
     requires: [EXTRACT_RED]
     hold_frames: 30
     timeout_s: 30
-    voice_prompt: Step 4. Confirm the red box is seated in zone A.
+    voice_prompt: Step 4. Confirm the red box is seated on the right pad.
 
   - step_id: EXTRACT_BLUE
     index: 5
     title: Extract the blue box
-    instruction: Pick the blue box out of the tray and place it in zone B.
-    predicate: hoi_cycle(blue_box, zone_b)
+    # Place blue_box on the LEFT pad (zone_blue, camera-left of tray).
+    instruction: Pick the blue box out of the tray and place it on the left pad.
+    predicate: hoi_cycle(blue_box, zone_blue)
     target: blue_box
-    zone: zone_b
+    zone: zone_blue
     requires: [VERIFY_RED_PLACED]
     hold_frames: 4
     timeout_s: 90
-    voice_prompt: Step 5. Move the blue box to zone B.
-    voice_alert: Out of sequence. The red box must be placed before the blue box.
+    voice_prompt: Step 5. Move the blue box to the left pad.
+    voice_alert: Out of sequence. The red box must be placed on the right pad before the blue box.
 
   - step_id: VERIFY_BLUE_PLACED
     index: 6
     title: Verify blue box placement
-    instruction: Confirm the blue box is stationary inside zone B.
-    predicate: settled(blue_box, zone_b)
+    instruction: Confirm the blue box is stationary inside the left pad.
+    predicate: settled(blue_box, zone_blue)
     target: blue_box
-    zone: zone_b
+    zone: zone_blue
     requires: [EXTRACT_BLUE]
     hold_frames: 30
     timeout_s: 30
-    voice_prompt: Step 6. Confirm the blue box is seated in zone B.
+    voice_prompt: Step 6. Confirm the blue box is seated on the left pad.
 
   - step_id: STOW_AND_CLOSE
     index: 7
-    title: Stow the lid and clear the envelope
-    instruction: Return the lid to the tray and withdraw both hands from the rack envelope.
+    title: Clear the work envelope
+    instruction: Withdraw both hands from the rack work envelope.
     predicate: hands_clear(rack_roi)
     target: tray_lid
     zone: rack_roi
     requires: [VERIFY_BLUE_PLACED]
     hold_frames: 20
     timeout_s: 60
-    voice_prompt: Step 7. Replace the lid and clear the work envelope.
+    voice_prompt: Step 7. Clear both hands from the work envelope.
     voice_alert: Hands are still inside the work envelope.
