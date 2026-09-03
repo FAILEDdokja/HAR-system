@@ -128,17 +128,27 @@ def events_of(events: list[StepEvent], kind: str) -> list[StepEvent]:
 # The A1 fixtures model runs where every step eventually happens, so they can
 # never exercise rule 5 (a step that stalls past ``timeout_s``) or rule 7 (a
 # tracker that only ever coasts).  These helpers build the degenerate frames
-# directly.  A wrist is kept inside the rack envelope on every frame so that
-# step 8 (``hands_clear``) cannot read an empty scene as satisfied and trip
-# the out-of-order scan while we are stalling step 1.
+# directly.  A wrist is kept inside the rack envelope on every frame to model
+# an operator working at the rack.  (Historically this was also the only thing
+# stopping step 7's ``hands_clear`` from reading an *empty* scene as satisfied
+# and tripping the out-of-order scan while step 1 stalled; that vacuous-truth
+# bug is fixed in the predicate and pinned by ``ValidatorEmptyHandsTests``.)
 # ---------------------------------------------------------------------------
 
 HAND_IN_ENVELOPE = (Wrist((320.0, 430.0), 0.95, "right"),)
+HAND_OUT_OF_ENVELOPE = (Wrist((630.0, 10.0), 0.95, "right"),)  # outside rack_roi
+NO_HANDS: tuple[Wrist, ...] = ()
 TRAY_BOX = (230.0, 240.0, 410.0, 410.0)  # centre well inside rack_roi
 FPS = 15.0
 
 
-def tray_frame(frame_index: int, *, present: bool = True, measured: bool = True) -> FrameEvidence:
+def tray_frame(
+    frame_index: int,
+    *,
+    present: bool = True,
+    measured: bool = True,
+    hands: tuple[Wrist, ...] = HAND_IN_ENVELOPE,
+) -> FrameEvidence:
     """One frame of evidence about the tray only (all other props absent)."""
     objects = {}
     if present:
@@ -148,7 +158,7 @@ def tray_frame(frame_index: int, *, present: bool = True, measured: bool = True)
         t_rel=frame_index / FPS,
         frame_size=FRAME_SIZE,
         objects=objects,
-        hands=HAND_IN_ENVELOPE,
+        hands=hands,
         hoi={"tray": "IDLE"} if present else {},
         rack_ready=True,
         fps=FPS,
@@ -416,6 +426,202 @@ class ValidatorMeasuredFalseTests(unittest.TestCase):
         self.assertEqual(0, len(events_of(events, "OUT_OF_ORDER")))
         self.assertEqual(0, len(events_of(events, "SKIPPED")))
         self.assertEqual("PRESENT_TRAY", validator.current.step_id)
+
+
+@unittest.skipIf(load_protocol is None, "PyYAML is not installed")
+class ValidatorEmptyHandsTests(unittest.TestCase):
+    """Regression: an empty ``ev.hands`` must not satisfy step 7 early.
+
+    Live symptom: the run sat on step 1 / 2 (PRESENT_TRAY / OPEN_TRAY) with
+    nobody's hands in frame, yet the GUI and voice produced step 7's
+    ``voice_alert``.  ``hands_clear`` was ``all(...)`` over an empty wrist
+    list — vacuously true — so the later-step scan (rule 3) flagged
+    STOW_AND_CLOSE as done out of order, and after its ``hold_frames`` the
+    skip-jump (rule 4) could even drag the cursor forward.  The tests below
+    drive ``SequenceValidator`` against the real ``protocols/pts01.yaml``.
+    """
+
+    STEP7_HOLD = 20  # pts01.yaml STOW_AND_CLOSE hold_frames
+
+    def _run(self, validator, frames):
+        events: list[StepEvent] = []
+        for frame in frames:
+            events.extend(validator.update(frame))
+        return events
+
+    def test_no_hands_on_step_one_emits_nothing_but_started(self):
+        # Run start, tray not yet presented, no hands anywhere: 90 frames is
+        # more than 4x step 7's hold, so both the OUT_OF_ORDER alert and the
+        # SKIPPED jump would have had ample time to fire.
+        validator = make_validator()
+        events = self._run(validator, (tray_frame(i, present=False, hands=NO_HANDS) for i in range(90)))
+        self.assertEqual(["STARTED"], [e.event for e in events])
+        self.assertEqual("PRESENT_TRAY", validator.current.step_id)
+        self.assertEqual((), validator.violations)
+        status = validator.status()
+        self.assertEqual("", status.last_alert)
+        self.assertEqual((), status.skipped)
+        self.assertEqual("PRESENT_TRAY", status.current_step_id)
+
+    def test_no_hands_while_on_step_two_emits_no_step_seven_violation(self):
+        # Complete step 1 with hands out of frame, then sit on step 2 (the lid
+        # never moves) still with no hands: step 7 must stay unsatisfied.
+        validator = make_validator()
+        lid_on_tray = ObjectTrack(label="tray_lid", box=(260.0, 270.0, 380.0, 380.0), measured=True)
+
+        def frame(i: int) -> FrameEvidence:
+            return FrameEvidence(
+                frame_index=i,
+                t_rel=i / FPS,
+                frame_size=FRAME_SIZE,
+                objects={
+                    "tray": ObjectTrack(label="tray", box=TRAY_BOX, measured=True),
+                    "tray_lid": lid_on_tray,
+                },
+                hands=NO_HANDS,
+                hoi={"tray": "IDLE", "tray_lid": "IDLE"},
+                rack_ready=True,
+                fps=FPS,
+            )
+
+        events = self._run(validator, (frame(i) for i in range(120)))
+        self.assertEqual(["PRESENT_TRAY"], list(validator.completed_steps))
+        self.assertEqual("OPEN_TRAY", validator.current.step_id)
+        self.assertEqual(0, len(events_of(events, "OUT_OF_ORDER")))
+        self.assertEqual(0, len(events_of(events, "SKIPPED")))
+        self.assertNotIn("STOW_AND_CLOSE", [e.step_id for e in events])
+        self.assertEqual((), validator.violations)
+        self.assertEqual("", validator.status().last_alert)
+
+    def test_hands_visible_but_outside_envelope_is_not_cleared_either(self):
+        # A wrist that is detected but has only ever been *outside* rack_roi
+        # is not evidence the envelope was cleared.
+        validator = make_validator()
+        events = self._run(
+            validator, (tray_frame(i, present=False, hands=HAND_OUT_OF_ENVELOPE) for i in range(60))
+        )
+        self.assertEqual(["STARTED"], [e.event for e in events])
+        self.assertEqual((), validator.violations)
+
+    def test_hands_in_then_out_while_on_step_one_is_a_real_out_of_order(self):
+        # The predicate still detects a *genuine* early clearance: the
+        # operator reaches into the envelope and withdraws while the tray is
+        # never presented.  This is the (rare) legitimate OUT_OF_ORDER for
+        # step 7 and it must carry the step's out-of-sequence voice_alert —
+        # not a "hands still inside" message.
+        validator = make_validator()
+        frames = [tray_frame(i, present=False, hands=HAND_IN_ENVELOPE) for i in range(10)]
+        frames += [tray_frame(10 + i, present=False, hands=NO_HANDS) for i in range(self.STEP7_HOLD + 5)]
+        events = self._run(validator, frames)
+        ooo = events_of(events, "OUT_OF_ORDER")
+        self.assertEqual(1, len(ooo))
+        self.assertEqual("STOW_AND_CLOSE", ooo[0].step_id)
+        self.assertEqual(
+            "Out of sequence: work envelope was cleared before earlier steps finished.",
+            ooo[0].message,
+        )
+        self.assertNotIn("still inside", ooo[0].message.lower())
+
+    def test_reset_clears_the_hands_seen_latch(self):
+        # Manual Restart (validator.reset()) must forget that hands were ever
+        # in the envelope; otherwise the very next run would start with step 7
+        # satisfied on an empty scene, re-creating the bug after a restart.
+        validator = make_validator()
+        self._run(validator, (tray_frame(i, present=False, hands=HAND_IN_ENVELOPE) for i in range(5)))
+        validator.reset()
+        events = self._run(validator, (tray_frame(i, present=False, hands=NO_HANDS) for i in range(60)))
+        self.assertEqual(["STARTED"], [e.event for e in events])
+        self.assertEqual((), validator.violations)
+        self.assertEqual("PRESENT_TRAY", validator.current.step_id)
+
+    def test_step_seven_completes_only_after_hands_enter_then_leave(self):
+        # Normal completion path: replay the correct fixture up to and
+        # including VERIFY_BLUE_PLACED so STOW_AND_CLOSE is current, then
+        # drive step 7 by hand.  While the operator's wrist is in the
+        # envelope it must not complete; once it leaves (whether detected
+        # outside or not detected at all) it completes after hold_frames.
+        frames = load_frames("evidence_correct.json")
+        validator = make_validator()
+        for frame in frames:
+            validator.update(frame)
+            if validator.current is not None and validator.current.step_id == "STOW_AND_CLOSE":
+                break
+        self.assertEqual("STOW_AND_CLOSE", validator.current.step_id)
+        base = frames[-1].frame_index + 100
+        final = frames[-1]
+
+        def frame(i: int, hands) -> FrameEvidence:
+            return FrameEvidence(
+                frame_index=base + i,
+                t_rel=(base + i) / FPS,
+                frame_size=FRAME_SIZE,
+                objects=final.objects,
+                hands=hands,
+                hoi=final.hoi,
+                rack_ready=True,
+                fps=FPS,
+            )
+
+        # Hands still inside: 40 frames (2x hold) and nothing completes.
+        stuck = self._run(validator, (frame(i, HAND_IN_ENVELOPE) for i in range(40)))
+        self.assertEqual(0, len(events_of(stuck, "COMPLETED")))
+        self.assertFalse(validator.finished)
+        # Hands withdraw: hold_frames - 1 frames is not enough...
+        early = self._run(validator, (frame(40 + i, NO_HANDS) for i in range(self.STEP7_HOLD - 1)))
+        self.assertEqual(0, len(events_of(early, "COMPLETED")))
+        # ...the next one completes step 7 and the protocol, with no violation.
+        done = validator.update(frame(40 + self.STEP7_HOLD - 1, NO_HANDS))
+        self.assertEqual(["COMPLETED", "PROTOCOL_COMPLETE"], [e.event for e in done])
+        self.assertEqual("STOW_AND_CLOSE", done[0].step_id)
+        self.assertTrue(validator.finished)
+        self.assertEqual((), validator.violations)
+
+    def test_step_seven_does_not_complete_if_hands_were_never_in_envelope(self):
+        # Reach step 7 with an operator who never had a wrist inside rack_roi
+        # (e.g. the pose model missed both hands all run).  Step 7 must then
+        # wait — and eventually TIMEOUT — rather than auto-complete on the
+        # empty scene.  The 60 s timeout behaviour is unchanged.
+        frames = load_frames("evidence_correct.json")
+        validator = make_validator()
+        for frame in frames:
+            stripped = FrameEvidence(
+                frame_index=frame.frame_index,
+                t_rel=frame.t_rel,
+                frame_size=frame.frame_size,
+                objects=frame.objects,
+                hands=NO_HANDS,
+                hoi=frame.hoi,
+                rack_ready=frame.rack_ready,
+                fps=frame.fps,
+            )
+            validator.update(stripped)
+        self.assertEqual("STOW_AND_CLOSE", validator.current.step_id)
+        self.assertEqual((), validator.violations)
+        final = frames[-1]
+        entered = final.frame_index
+        events: list[StepEvent] = []
+        for second in range(1, 70):
+            idx = entered + int(second * FPS)
+            events.extend(
+                validator.update(
+                    FrameEvidence(
+                        frame_index=idx,
+                        t_rel=idx / FPS,
+                        frame_size=FRAME_SIZE,
+                        objects=final.objects,
+                        hands=NO_HANDS,
+                        hoi=final.hoi,
+                        rack_ready=True,
+                        fps=FPS,
+                    )
+                )
+            )
+        self.assertEqual(0, len(events_of(events, "COMPLETED")))
+        self.assertFalse(validator.finished)
+        timeouts = events_of(events, "TIMEOUT")
+        self.assertEqual(1, len(timeouts))
+        self.assertEqual("STOW_AND_CLOSE", timeouts[0].step_id)
+        self.assertEqual("Step 7 timed out after 60s", timeouts[0].message)
 
 
 @unittest.skipIf(load_protocol is None, "PyYAML is not installed")

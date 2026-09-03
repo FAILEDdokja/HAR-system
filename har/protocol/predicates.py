@@ -30,6 +30,12 @@ class PredicateState:
     hoi_seen: set[str] = field(default_factory=set)
     last_box: BBox | None = None
     initial_box: BBox | None = None
+    #: Latched by :func:`hands_clear` the first time a wrist is observed
+    #: inside the step's zone this run.  ``hands_clear`` can only be true
+    #: once this is set: an empty ``ev.hands`` (operator not yet in frame,
+    #: pose miss) is *absence of evidence*, not evidence that the envelope
+    #: was cleared.  Reset together with the rest of the state.
+    hands_seen_in_zone: bool = False
 
 
 Predicate = Callable[[FrameEvidence, ProtocolSpec, StepSpec, PredicateState], bool]
@@ -249,13 +255,33 @@ def transfer(ev: FrameEvidence, spec: ProtocolSpec, step: StepSpec, st: Predicat
 
 
 def hands_clear(ev: FrameEvidence, spec: ProtocolSpec, step: StepSpec, st: PredicateState) -> bool:
-    """No detected wrist is inside the named zone."""
+    """Hands were inside the named zone earlier this run and are now all out.
+
+    Three outcomes, in order:
+
+    * A wrist is currently inside the zone → ``False`` (and the
+      ``hands_seen_in_zone`` latch is set).
+    * No wrist has *ever* been observed inside the zone this run →
+      ``False``.  This is the important one: before the operator reaches in
+      (start of run, hands out of frame, pose miss) ``ev.hands`` is empty,
+      and a vacuous "no wrist is inside" must not count as the envelope
+      having been *cleared*.  Without this guard the validator's later-step
+      scan saw the final ``hands_clear`` step as satisfied from frame 0 and
+      raised a false ``OUT_OF_ORDER`` (with step 7's voice alert) while the
+      run was still on step 1 / 2 — and after ``hold_frames`` could even
+      skip-jump the cursor forward.
+    * Hands were seen inside the zone and none is inside now → ``True``.
+      The validator's ``hold_frames`` supplies the required persistence.
+    """
 
     zone_id = _arg(step, 0, step.zone)
     zone = _zone_box(spec, zone_id)
     if zone is None:
         return False
-    return all(not _point_in_box(wrist.point, zone) for wrist in ev.hands)
+    if any(_point_in_box(wrist.point, zone) for wrist in ev.hands):
+        st.hands_seen_in_zone = True
+        return False
+    return st.hands_seen_in_zone
 
 
 PREDICATES: dict[str, Predicate] = {
